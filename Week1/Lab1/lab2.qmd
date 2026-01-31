@@ -1,0 +1,51 @@
+
+---
+title: "Lab 2: The Linear Model"
+format: html
+editor: source
+---
+
+### Overview
+
+
+Complete this assignment by answering the following questions using code, text descriptions, and mathematics in a quarto markdown document. Render your .qmd to a pdf and submit both the qmd and pdf files on brightspace.
+
+The purpose of this lab is for you to practice making linear regression models for inference and for prediction
+using `statsmodels` (my suggestion) or another library of your choosing. `statsmodels` is well featured for implementing statistical models and will automatically calculate most of the statistics that you need. `scikit-learn` is also possible to use. If you are feeling adventurous and want more of a challenge, you are welcome to perform the lab using `pymc` and do the regressions in a Bayesian framework (I would replace AIC with WAIC if you do so).
+
+We will a dataset called `earnings. It can be found on
+the website for the textbook [Regression and Other Stories](https://avehtari.github.io/ROS-Examples/), and if you are struggling this book has a good amount
+of discussion on this dataset. Use the version of the dataset that I provided, however, as I found some errors in the data processing in the originals on the website. 
+
+
+### Problem 1: Confounds in Earnings Data
+
+The dataset [earnings.csv]("https://github.com/georgehagstrom/DATA622Spring2026/tree/main/website/assignments/labs/labData/questions.csv") contains samples from the _Work, Family, and Well Being_ survey, which was collected by
+a group led by Catherine Ross in 1990. We are working with a processed version of the dataset, which contains
+information on the `height`, `weight`, `age`, `gender`, `ethnicity` `earnings`, `education` (for the respondent and their mother and father), and their health habits (levels of `walk`, `smoking`, `exercise`, `anger`, and `tension`). You can read a dataset description at [earnings_dictionary.qmd](https://github.com/georgehagstrom/DATA622Spring2026/tree/main/website/assignments/labs/labData/earnings_dictionary.qmd). The goal of this problem is to understand which socioeconomic factors have an effect on earnings. 
+
+(a) __EDA__: Perform a basic exploratory data analysis on this dataset. Tell me how you decided to handle rows with missing values, and show me the plots of the distributions of variables and the relationships between variables that you believe are most important. An important decision is how to handle `earnk`, the target variable, and whether to `log` transform it or not. Look at the distribution of `earnk` and discuss the pros and cons of using the `log` transform, and make a decision about whether perform the transformation or not.
+
+(b) __Height and Weight Confounds:__ Fit separate linear regression models predicting the effect of either `height`
+or `weight` on your earnings target variable (`log_earnk` or `earnk`). Report the model fit coefficients and their
+confidence intervals for each. Make a linear regression model that includes both height and weight and compare the predicted confidence intervals for the coefficients. What is your explanation for what happened? Find another variable that could confound the relationship between height/weight and earnings, include it in a linear regression model, and explain the outcome.
+
+(c) __Education Coefficients:__ Fit a linear regression model to measure the total effect of parental education on your earnings target. Then compare the coefficients you found to those of a linear model which also includes the education variable. How do you interpret the coefficient of parental education variables in each of the two models?
+
+
+
+(d) __Potential Colliders:__ Consider each variable carefully, as well as your data processing steps. Are there any variables that you can identify which have the potential to cause collider bias in your regression models?
+You do not need to perform any regressions, just discussion. 
+
+
+
+### Problem 2: Optimizing a Predictive Model
+
+The goal of this problem is to devise a linear regression model with 
+optimal expected out of sample performance. You should use `AIC` (or `WAIC` if you are trying `pymc`) as your proxy for predictive accuracy. For this problem you will try several different models, but they must all have the same target in order for `AIC` to be comparable (you can perform a correction to fix this issue but that is a topic for another time).
+
+(a) __Baseline Model:__ Start with a model that includes `age`, `gender`, `education`, fit a linear model and calculate the deviance.
+
+(b) __Feature Engineering and Variable Selection:__ Based on your EDA and your experience fitting models so far, attempt to develop a model with the lowest possible `AIC`. You are encouraged to look at plots of variables versus the target and create custom features based on what you see, though it is not required to do so. I'll award one person 5 bonus points for my subjectively judged most useful feature engineered. In your best model, which variables do you exclude? Do you include any pairs of collinear variables?
+
+

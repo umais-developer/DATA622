@@ -1,0 +1,157 @@
+---
+title: "Project Proposal: Intelligent Pharmacy Inventory Management"
+subtitle: "Minimizing Waste and Preventing Stockouts via Time-Series Forecasting"
+author: "GROUP X (UMAIS SIDDIQUI, XXXX,XXXX,XXXX)"
+date: "January 27, 2026"
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    fig-format: png  # Forces plots to be saved as PNGs for the PDF
+ 
+jupyter: python3
+---
+\newpage
+# 1. Executive Summary
+
+This proposal outlines the development of a Machine Learning-driven inventory system designed specifically for community pharmacies. The project aims to solve the "Optimization Paradox" in retail healthcare: the conflict between maintaining high stock levels to ensure patient safety and minimizing stock levels to reduce financial waste from expired medications. By implementing an additive regression model (Facebook Prophet), this project will simulate and predict demand for high-volatility medications, providing actionable "Order Now" triggers to pharmacists.
+```{python}
+#| label: fig-paradox
+#| fig-cap: "The Optimization Paradox: Balancing Safety vs. Waste"
+#| echo: false
+#| fig-format: png
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 1. Create Data for the Curves
+inventory_level = np.linspace(10, 100, 100)
+
+# Curve A: Financial Waste (Linear increase with more stock)
+# "If I buy too much, I lose money on expired meds"
+waste_cost = inventory_level * 0.8  
+
+# Curve B: Patient Risk (Exponential decrease with more stock)
+# "If I have very little stock, risk of stockout is huge"
+stockout_risk = 2000 / inventory_level 
+
+# Total Cost Curve (The sum of both)
+total_impact = waste_cost + stockout_risk
+
+# Find the "Sweet Spot" (Minimum of Total Impact)
+min_index = np.argmin(total_impact)
+optimal_stock = inventory_level[min_index]
+min_impact = total_impact[min_index]
+
+# 2. Plotting
+fig, ax = plt.subplots(figsize=(6.5, 3.5))
+
+# Draw the curves
+ax.plot(inventory_level, waste_cost, color='#d9534f', linestyle='--', linewidth=2, label='Financial Waste (Spoilage)')
+ax.plot(inventory_level, stockout_risk, color='#f0ad4e', linestyle='--', linewidth=2, label='Patient Risk (Stockouts)')
+ax.plot(inventory_level, total_impact, color='#333333', linewidth=3, label='Total Business Impact')
+
+# 3. Highlight the Solution (Your Project)
+ax.scatter(optimal_stock, min_impact, s=150, color='#5cb85c', zorder=5)
+ax.annotate('ML Optimization Point\n(Target Inventory)', 
+            xy=(optimal_stock, min_impact), 
+            xytext=(optimal_stock + 20, min_impact + 20),
+            arrowprops=dict(facecolor='black', arrowstyle='->'),
+            fontsize=10, fontweight='bold')
+
+# 4. Formatting
+ax.set_xlabel("Inventory Level (Units held)", fontsize=10, fontweight='bold')
+ax.set_ylabel("Cost / Risk Impact", fontsize=10, fontweight='bold')
+ax.set_title("The Optimization Paradox", fontsize=12)
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=3, fontsize=9, frameon=False)
+ax.grid(True, linestyle=':', alpha=0.6)
+ax.set_xlim(10, 100)
+ax.set_yticks([]) # Hide y-axis numbers (conceptual chart)
+
+plt.tight_layout()
+plt.show()
+```
+\newpage
+# 2. Problem Statement & Motivation
+
+## 2.1. The Operational Challenge
+Pharmacy inventory management is uniquely challenging due to two opposing risks:
+1.  **Stockouts (Under-stocking):** If a pharmacy runs out of critical maintenance medications (e.g., insulin, blood pressure meds), it poses a direct health risk to patients and results in lost revenue and trust.
+2.  **Spoilage (Over-stocking):** Medications have strict expiration dates. Over-ordering leads to "inventory shrink," where expensive drugs must be destroyed, costing independent pharmacies thousands of dollars annually.
+
+## 2.2. Current Limitations
+Most small-to-mid-sized pharmacies rely on reactive methods, such as:
+* **Manual Min/Max:** Reordering only when the shelf looks empty.
+* **Static Averages:** Ordering the same amount every week, ignoring seasonality (e.g., flu season spikes in January).
+
+These methods fail to account for **temporal patterns**, such as the "weekend dip" (when clinics are closed) or the "winter surge" (antibiotics/antivirals).
+
+# 3. Project Objectives
+
+The primary objective is to build a functional Machine Learning pipeline that automates the decision-making process for inventory replenishment.
+
+* **Objective A (Data Engineering):** Develop a synthetic data engine to generate HIPAA-compliant, realistic pharmacy sales logs that exhibit seasonality, trend, and noise.
+* **Objective B (Modeling):** Train a Time-Series model capable of predicting daily demand 30 days into the future with a Mean Absolute Percentage Error (MAPE) of <20%.
+* **Objective C (Application):** Translate model predictions into business decisions (e.g., "Order 50 units of Amoxicillin today").
+
+\newpage
+
+# 4. Project Justification: Why This is a "Good" Project
+
+This project is selected for its high relevance to real-world operations and its balance of technical challenges:
+
+1.  **Business Value:** It directly addresses the "Triple Bottom Line" of a pharmacy: Financial Health (reduced waste), Operational Efficiency (less manual counting), and Patient Care (guaranteed stock).
+2.  **Technical Depth:**
+    * It moves beyond simple classification into **Time-Series Forecasting**, a highly valued skill in industry.
+    * It requires handling **Seasonality and Holidays**, forcing the model to understand calendar-specific events.
+3.  **Feasibility:** Unlike projects requiring massive GPU clusters or sensitive medical records, this project can be built using high-fidelity synthetic data, ensuring no blockers regarding data privacy (HIPAA) or hardware limitations.
+
+# 5. Technical Methodology
+
+## 5.1. System Architecture
+The project will follow a standard ETL (Extract, Transform, Load) and Inference pipeline.
+
+```{python}
+#| label: fig-pipeline-mpl
+#| fig-cap: "Architecture (Matplotlib)"
+#| echo: false
+#| fig-format: png
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+# 1. Setup the canvas
+fig, ax = plt.subplots(figsize=(6.5, 2.5))
+ax.set_xlim(-0.5, 12)
+ax.set_ylim(0, 2)
+ax.axis('off') 
+
+# 2. Helper function
+def draw_box(x, y, text, color='#e6f2ff', shape='box'):
+    if shape == 'box':
+        p = patches.FancyBboxPatch((x, y), 1.5, 0.8, boxstyle="round,pad=0.1", 
+                                   linewidth=1.5, edgecolor='#8cb3d9', facecolor=color)
+    else:
+        p = patches.RegularPolygon((x+0.75, y+0.4), numVertices=4, radius=0.75, 
+                                   orientation=0, linewidth=1.5, edgecolor='#8cb3d9', facecolor=color)
+    ax.add_patch(p)
+    ax.text(x + 0.75, y + 0.4, text, ha='center', va='center', fontsize=9, fontfamily='sans-serif')
+
+# 3. Draw Nodes
+draw_box(0, 0.6, "Synthetic\nData", color='#ffe6f2')
+draw_box(2.5, 0.6, "Data\nPrep")
+draw_box(5.0, 0.6, "Prophet\nModel", shape='diamond') 
+draw_box(7.5, 0.6, "Inference")
+draw_box(10.0, 0.6, "Reorder\nLogic")
+
+# 4. Draw Arrows
+style = dict(facecolor='black', arrowstyle='->', lw=1.5)
+ax.annotate('', xy=(2.5, 1.0), xytext=(1.6, 1.0), arrowprops=style)
+ax.annotate('', xy=(5.0, 1.0), xytext=(4.1, 1.0), arrowprops=style)
+ax.annotate('', xy=(7.5, 1.0), xytext=(6.5, 1.0), arrowprops=style)
+ax.annotate('', xy=(10.0, 1.0), xytext=(9.1, 1.0), arrowprops=style)
+
+plt.tight_layout()
+plt.show()
+```

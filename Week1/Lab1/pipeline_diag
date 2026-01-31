@@ -1,0 +1,21 @@
+digraph {
+	nodesep=0.4 rankdir=LR ranksep=0.6
+	node [color="#8cb3d9" fillcolor="#e6f2ff" fixedsize=true fontname=Helvetica fontsize=10 height=0.7 penwidth=1.5 shape=box style="filled,rounded" width=1.6]
+	A [label="Synthetic Data
+Generator" color="#dba2c2" fillcolor="#ffe6f2"]
+	B [label="Data
+Preprocessing"]
+	C [label="Prophet
+Model" height=1.3 shape=diamond width=1.3]
+	D [label="Model
+Artifact"]
+	E [label="30-Day
+Forecast"]
+	F [label="Reorder
+Logic"]
+	A -> B [label=" CSV"]
+	B -> C [label=" Time Series"]
+	C -> D [label=" Train"]
+	D -> E [label=" Inference"]
+	E -> F [label=" Action"]
+}

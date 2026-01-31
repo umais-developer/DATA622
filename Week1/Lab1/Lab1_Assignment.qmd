@@ -1,0 +1,52 @@
+---
+title: "Python Lab1 Assignment"
+author: "Umais Siddiqui"
+format: 
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    fig-format: png  # Forces plots to be saved as PNGs for the PDF
+jupyter: python3
+---
+
+# Introduction
+
+The purpose of this assignment is to review basic data manipulation and plotting in python.
+
+# Problem 1
+
+## Inspection of the data
+
+In the code below I am loading the required libraries to load the file that is needed to answer Problem 1.
+I will also be loading the Auto data. Finally making that the missing values have been removed from the data.
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Load data - replacing '?' with NaN and dropping them
+auto = pd.read_csv('DataSets/Auto.csv', na_values='?')
+auto = auto.dropna()
+# (a) Identify types
+# quantitative: mpg, cylinders, displacement, horsepower, weight, acceleration, year
+# qualitative: origin, name
+print(auto.dtypes)
+
+
+```
+
+## a. Which of the predictors are quantitative, and which are qualitative?
+
+Quantitative: mpg, cylinders, displacement, horsepower, weight, acceleration, year.
+
+Qualitative: origin, name. (Note: cylinders and origin are integers but often treated as categorical; however, for this context, origin is strictly qualitative/categorical).
+
+## b. What is the range of each quantitative predictor? You can answer this using the min() and max() methods in numpy.
+```{python}
+# (b) & (c) Summary stats for quantitative predictors
+quant_cols = ['mpg', 'cylinders', 'displacement', 'horsepower', 'weight', 'acceleration', 'year']
+min_max = auto[quant_cols].agg(['min', 'max'])
+print(min_max)
+```
