@@ -1,7 +1,6 @@
 ---
 title: "Python Lab1 Assignment DATA 622 Spring 2026"
 author: "Umais Siddiqui"
-date: "`r Sys.Date()`"
 format: 
   pdf:
     toc: true
@@ -102,6 +101,7 @@ plt.show()
 Based on the scatterplots and correlation matrix, the following predictors show strong negative correlations with mpg:
 
 **Weight vs. MPG:** 
+
 - There is a very strong negative linear relationship.
 - As weight increases, miles per gallon decreases significantly. 
 - Weight is one of the most powerful predictors. 
@@ -120,7 +120,8 @@ Based on the scatterplots and correlation matrix, the following predictors show 
 - These three variables are highly positively correlated with each other  > 0.86.
 - This indicates that larger engines tend to be heavier and produce more power.
 
-**Machine Learning Impact:** 
+**Machine Learning Impact:**
+ 
 In a regression model, this is called Multicollinearity. Including all three might be redundant.
 
 **The Role of 'Year' and 'Cylinders'**
