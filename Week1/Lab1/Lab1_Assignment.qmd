@@ -1,16 +1,20 @@
 ---
-title: "Python Lab1 Assignment"
+title: "Python Lab1 Assignment DATA 622 Spring 2026"
 author: "Umais Siddiqui"
+date: "`r Sys.Date()`"
 format: 
   pdf:
     toc: true
     number-sections: true
     colorlinks: true
     fig-format: png  # Forces plots to be saved as PNGs for the PDF
+execute:
+  echo: false    # This hides the code but keeps the output
+  warning: false # This hides those "SyntaxWarnings" we saw earlier
 jupyter: python3
 ---
 
-# Introduction
+**Introduction:**
 
 The purpose of this assignment is to review basic data manipulation and plotting in python.
 
@@ -19,7 +23,7 @@ The purpose of this assignment is to review basic data manipulation and plotting
 ## Inspection of the data
 
 In the code below I am loading the required libraries to load the file that is needed to answer Problem 1.
-I will also be loading the Auto data. Finally making that the missing values have been removed from the data.
+The data I will be loading is the Auto data. Finally making that the missing values have been removed from the data.
 
 ```{python}
 import pandas as pd
@@ -34,19 +38,304 @@ auto = auto.dropna()
 # qualitative: origin, name
 print(auto.dtypes)
 
-
 ```
 
-## a. Which of the predictors are quantitative, and which are qualitative?
+## (A) Which of the predictors are quantitative, and which are qualitative?
 
-Quantitative: mpg, cylinders, displacement, horsepower, weight, acceleration, year.
+**Quantitative:** mpg, cylinders, displacement, horsepower, weight, acceleration, year.
 
-Qualitative: origin, name. (Note: cylinders and origin are integers but often treated as categorical; however, for this context, origin is strictly qualitative/categorical).
+**Qualitative:** origin, name. 
 
-## b. What is the range of each quantitative predictor? You can answer this using the min() and max() methods in numpy.
 ```{python}
-# (b) & (c) Summary stats for quantitative predictors
+origin_min_max = auto['origin'].agg(['min', 'max'])
+print(origin_min_max)
+```
+
+In this dataset, "origin" is usually coded as 1, 2, or 3 (representing American, European, and Japanese cars respectively). Unlike cylinders, where an 8-cylinder engine actually has twice the physical components of a 4-cylinder engine, the numbers for origin carry no such weight
+
+## (B) What is the range of each quantitative predictor? You can answer this using the min() and max() methods in numpy.
+```{python}
+# (b) Summary stats for quantitative predictors
 quant_cols = ['mpg', 'cylinders', 'displacement', 'horsepower', 'weight', 'acceleration', 'year']
 min_max = auto[quant_cols].agg(['min', 'max'])
 print(min_max)
 ```
+
+## (C) What is the mean and standard deviation of each quantitative predictor?
+```{python}
+mean_std = auto[quant_cols].agg(['mean', 'std'])
+print(mean_std)
+
+
+```
+## (D) Now remove the 10th through 85th observations. What is the range, mean, and standard deviation of each predictor in the subset of the data that remains?
+```{python}
+subset_auto = auto.drop(auto.index[9:85])
+subset_min_max = subset_auto[quant_cols].agg(['min', 'max'])  
+subset_mean_std = subset_auto[quant_cols].agg(['mean', 'std'])
+print(subset_min_max)
+print(subset_mean_std)      
+
+```
+
+## (E) Using the full data set, investigate the predictors graphically, using scatterplots or other tools of your choice. Create some plots highlighting the relationships among the predictors. Comment on your findings.
+```{python}
+# Pairplot to visualize relationships 
+import seaborn as sns
+
+# 1. Scatterplot Matrix
+
+sns.pairplot(auto[quant_cols])
+plt.suptitle('Pairplot of Quantitative Predictors', y=1.02)
+plt.show()
+
+# 2. Correlation Heatmap
+plt.figure(figsize=(10, 8))
+sns.heatmap(auto[quant_cols].corr(), annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Correlation Matrix of Predictors')
+plt.show()
+
+```
+
+**Strong Negative Correlations (Predicting mpg):**
+
+Based on the scatterplots and correlation matrix, the following predictors show strong negative correlations with mpg:
+
+**Weight vs. MPG:** 
+- There is a very strong negative linear relationship.
+- As weight increases, miles per gallon decreases significantly. 
+- Weight is one of the most powerful predictors. 
+- We can see that the correlation coefficient is around -0.83.
+
+**Displacement/Horsepower vs. MPG:** 
+
+- Similar to weight, as engine size and power increase, fuel efficiency drops. 
+- These relationships appear slightly non-linear (curved), suggesting that a simple linear regression might need polynomial terms for a perfect fit. 
+- The correlation coefficients are around -0.81 for displacement and -0.78 for horsepower.
+
+**Strong Positive Correlations (Collinearity):**
+
+**Displacement, Horsepower, and Weight:**
+
+- These three variables are highly positively correlated with each other  > 0.86.
+- This indicates that larger engines tend to be heavier and produce more power.
+
+**Machine Learning Impact:** 
+In a regression model, this is called Multicollinearity. Including all three might be redundant.
+
+**The Role of 'Year' and 'Cylinders'**
+
+**Year vs. MPG:** I am seeing a general upward trend. Newer cars tend to have better fuel efficiency, likely due to advancements in technology and stricter emissions standards.
+
+**Cylinders:** Although discrete, the scatterplots show distinct "strips." Each strip corresponds to a different number of cylinders, with higher cylinder counts generally associated with lower mpg.
+Notice that cylinders have a moderate negative correlation with mpg (-0.78).
+
+**Potential Outliers:** There are a few points that deviate significantly from the general trends, particularly in horsepower, weight and acceleration. These could be outliers or special cases (e.g., sports cars).
+
+## (F) Suppose that we wish to predict gas mileage (mpg) on the basis of the other variables. Do your plots suggest that any of the other variables might be useful in predicting mpg? Justify your answer.
+
+```{python}
+
+# Scatter plots of mpg against other quantitative predictors
+for col in quant_cols:
+    if col != 'mpg':
+        plt.figure()
+        plt.scatter(auto[col], auto['mpg'])
+        plt.xlabel(col)
+        plt.ylabel('mpg')
+        plt.title(f'mpg vs {col}')
+        plt.show()  
+
+```
+
+Based on the scatter plots generated, several variables appear to be strong predictors for mpg:
+
+Weight, Displacement, and Horsepower: These show strong negative relationships with mpg. As these values increase, mpg consistently drops, indicating they are primary predictors.
+
+**Year:** There is a clear positive trend, showing that newer cars generally achieve better gas mileage.
+
+**Cylinders:** Although discrete, the clear grouping shows that cars with more cylinders are restricted to the lower mpg range.
+
+below is a correlation summary for mpg with other predictors:
+
+```{python}
+# Compute correlations
+correlations = auto[quant_cols].corr()['mpg']
+print(correlations)
+```
+
+In conclusion, the visual evidence suggests that a combination of engine size (displacement/cylinders), power (horsepower), and mass (weight) will be highly effective in predicting a vehicle's fuel efficiency.
+
+# Problem 2 kNN Classification of the ZIP code digit data
+## In order to complete this problem you will need to download zip.train and zip.test from the course website. These datasets contain images of hand-drawn digits. We will be experimenting with kNN classification and factors impacting the bias-variance trade-off, and this will also be chance to practice using scikit-learn.
+
+## a. Download and load the training and test data sets using pandas. Make sure to load all of the data (there is no header) The zeroth column corresponds to the class label, a digit from 0-9, and the columns 1 to 256 correspond to a grayscale value from -1 to 1. Select the first entry in the training set, resize it to 16x16, and plot the image (you can use plt.imshow()).
+
+```{python}
+# Load the data
+train_data = pd.read_csv('DataSets/zip.train', header=None, sep=r'\s+')
+test_data = pd.read_csv('DataSets/zip.test', header=None, sep=r'\s+')  
+# Extract features and labels
+X_train = train_data.iloc[:, 1:].values   
+y_train = train_data.iloc[:, 0].values
+X_test = test_data.iloc[:, 1:].values
+y_test = test_data.iloc[:, 0].values
+# Plot the first entry in the training set
+first_image = X_train[0].reshape(16, 16)
+plt.imshow(first_image, cmap='gray')
+plt.title(f'Label: {y_train[0]}') 
+plt.axis('off')
+plt.show()
+```
+## b. The following code fits imports the kNN classification function from scikit-learn as well as an accuracy function, trains a classifier, and tests its accuracy on hypothetical training and testing data:
+
+```{python}
+#| eval: false
+#| echo: true
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+
+knn = KNeighborsClassifier(n_neighbors=4)
+knn.fit(zip_image_train, zip_class_train)
+
+zip_pred_train = knn.predict(zip_image_train)
+accuracy = accuracy_score(zip_class_train, zip_pred_train)
+print(f'Accuracy: {accuracy:.4f}')
+
+zip_pred_test = knn.predict(zip_image_test)
+accuracy = accuracy_score(zip_class_test, zip_pred_test)
+print(f'Accuracy: {accuracy:.4f}')
+```
+
+```{python}
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+
+# Example kNN classifier
+knn = KNeighborsClassifier(n_neighbors=4)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy}")
+```
+
+Where the dataframes contain just the training and testing images and class.Adapt this code to determine if the we can observe the bias variance trade-off for different numbers of neighbors . 
+Specifically, recreate plot 2.17 (pay attention to the x-axis scale and use the same choice as in the book) which shows test and train classification accuracy as a function of . 
+Select a range of from 1 to 300. You do not have to plot every single value in this range if the problem is computationally intensive on your machine. 
+
+ Do you observe a shaped curve in the testing error (and a divergence from training error) as 
+ increases?
+
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+
+#| label: knn-bias-variance
+k_values = [1, 3, 5, 10, 20, 50, 100, 150, 200, 300]
+train_errors = []
+test_errors = []
+
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train, y_train)
+    
+    # Calculate Training Error
+    train_pred = knn.predict(X_train)
+    train_errors.append(1 - accuracy_score(y_train, train_pred))
+    
+    # Calculate Testing Error
+    test_pred = knn.predict(X_test)
+    test_errors.append(1 - accuracy_score(y_test, test_pred))
+
+# Plotting
+plt.figure(figsize=(10, 6))
+# X-axis is 1/k to match ISLR Plot 2.17
+plt.plot([1/k for k in k_values], train_errors, label='Training Error', marker='o')
+plt.plot([1/k for k in k_values], test_errors, label='Testing Error', marker='o')
+plt.xlabel('Flexibility (1/k)')
+plt.ylabel('Error Rate')
+plt.title('Bias-Variance Tradeoff: Original Data')
+plt.legend()
+plt.show()
+```
+
+The Overfitting Zone (Right Side, $1/k = 1.0$):At the far right, $k=1$. 
+
+We can notice that Training Error is exactly 0.000. This is because the model has "memorized" the training set. However, the Testing Error is higher than its minimum point. This gap represents High Variance.The Underfitting Zone (Left Side, $1/k \approx 0.0$):As you move to the left (where $k=300$), both the Training and Testing errors climb significantly. The model is now too simple to capture the patterns in the digits. This represents High Bias.The Optimal Flexibility:The "Sweet Spot" is the lowest point on the orange line (the testing error). On the graph, this appears to be around $1/k = 0.2$ (which is $k=5$). This is where the model generalizes best to new data.
+
+Yes, a distinct U-shaped curve is observed in the testing error as flexibility ($1/k$) increases. While the training error decreases monotonically toward zero, the testing error hits a minimum at approximately $k=5$ and then begins to increase. This divergence at high flexibility levels ($k=1$ or $3$) is a clear indication of overfitting, where the model captures local noise in the training set that does not generalize to the test set.
+
+
+## c.
+Introduce some noise in the training and testing labels for both the training and testing data. You can do this by using np.random.choice to sample from the range of indices of each of the training and test set to determine which labels will be changed, and np.random.choice again to pick the new label. After making this modification, repeat problem (b). How did adding label noise impact the shape of the testing and training error versus 
+ curves?
+
+**Introducing Label Noise**
+
+To investigate how the bias-variance tradeoff changes when the data is "messy," we will introduce random noise into the training and testing labels. We define a function `add_noise` that randomly selects 10% of the labels and replaces them with a random digit from 0 to 9.
+
+```{python}
+import numpy as np
+
+def add_noise(labels, noise_level=0.1):
+    # Create a copy to avoid overwriting the original data
+    noisy_labels = labels.copy()
+    n_samples = len(labels)
+    
+    # Pick random indices to change
+    n_to_change = int(n_samples * noise_level)
+    target_indices = np.random.choice(n_samples, n_to_change, replace=False)
+    
+    # Pick new random labels (0-9 for the zip dataset)
+    new_labels = np.random.choice(range(10), n_to_change)
+    
+    # Apply changes
+    # Using .values ensures it works if the input is a Pandas Series
+    noisy_labels[target_indices] = new_labels
+    return noisy_labels
+
+# Apply noise to both datasets
+noisy_zip_class_train = add_noise(y_train)
+noisy_zip_class_test = add_noise(y_test)
+
+print(f"Noise applied to {int(len(y_train) * 0.1)} training samples.")
+print(f"Noise applied to {int(len(y_test) * 0.1)} testing samples.")
+
+```
+## Re-evaluating kNN with Noisy Labels
+
+Now, we will repeat the kNN classification process using the noisy labels and plot the training and testing error rates as a function of $1/k$.
+
+# Range of k: 1 to 300
+
+```{python}
+k_values = [1, 3, 5, 10, 20, 50, 100, 150, 200, 300]
+noisy_train_errors = []
+noisy_test_errors = []
+
+for k in k_values:
+    knn_noisy = KNeighborsClassifier(n_neighbors=k)
+    knn_noisy.fit(X_train, noisy_zip_class_train)
+    
+    train_pred_noisy = knn_noisy.predict(X_train)
+    noisy_train_errors.append(1 - accuracy_score(noisy_zip_class_train, train_pred_noisy))
+    
+    test_pred_noisy = knn_noisy.predict(X_test)
+    noisy_test_errors.append(1 - accuracy_score(noisy_zip_class_test, test_pred_noisy))
+
+# Plotting Noisy Results
+plt.figure(figsize=(10, 6))
+plt.plot([1/k for k in k_values], noisy_train_errors, label='Noisy Training Error', color='darkblue', marker='x')
+plt.plot([1/k for k in k_values], noisy_test_errors, label='Noisy Testing Error', color='darkorange', marker='x')
+plt.xlabel('Flexibility (1/k)')
+plt.ylabel('Error Rate')
+plt.title('Bias-Variance Tradeoff: Noisy Data')
+plt.legend()
+plt.show()
+```
+
+Adding 10% label noise significantly altered the bias-variance tradeoff. While the original data allowed for high flexibility with minimal penalty, the noisy data shows a sharp increase in test error as $1/k$ increases. This demonstrates that in the presence of noise, simpler models (larger $k$) are preferred because they are more robust to outliers and incorrect labels.
