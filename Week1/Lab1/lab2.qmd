@@ -26,6 +26,17 @@ information on the `height`, `weight`, `age`, `gender`, `ethnicity` `earnings`, 
 
 (a) __EDA__: Perform a basic exploratory data analysis on this dataset. Tell me how you decided to handle rows with missing values, and show me the plots of the distributions of variables and the relationships between variables that you believe are most important. An important decision is how to handle `earnk`, the target variable, and whether to `log` transform it or not. Look at the distribution of `earnk` and discuss the pros and cons of using the `log` transform, and make a decision about whether perform the transformation or not.
 
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.formula.api as smf
+df = pd.read_csv("earnings.csv")
+df.head()
+```
+
+
 (b) __Height and Weight Confounds:__ Fit separate linear regression models predicting the effect of either `height`
 or `weight` on your earnings target variable (`log_earnk` or `earnk`). Report the model fit coefficients and their
 confidence intervals for each. Make a linear regression model that includes both height and weight and compare the predicted confidence intervals for the coefficients. What is your explanation for what happened? Find another variable that could confound the relationship between height/weight and earnings, include it in a linear regression model, and explain the outcome.

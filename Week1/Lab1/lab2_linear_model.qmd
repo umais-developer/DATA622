@@ -1,0 +1,553 @@
+---
+title: "Lab 2: The Linear Model (Data 622)"
+format: pdf
+editor: source
+author: "Umais Siddiqui"
+execute:
+  echo: false    # This hides the code but keeps the output
+  warning: false # This hides those "SyntaxWarnings" we saw earlier
+---
+
+```{python}
+#| echo: true
+#| warning: false
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+sns.set_style("whitegrid")
+pd.set_option('display.max_columns', 20)
+
+df = pd.read_csv("earnings.csv")
+print(f"Dataset shape: {df.shape}")
+df.head()
+```
+
+## Problem 1: Confounds in Earnings Data
+
+### (a) Exploratory Data Analysis
+
+#### Inspect the data structure and missing values
+
+```{python}
+print("Column dtypes:")
+print(df.dtypes)
+print("\nBasic statistics:")
+df.describe().round(2)
+```
+
+```{python}
+# Missing values summary
+missing = df.isnull().sum()
+missing_pct = (df.isnull().sum() / len(df) * 100).round(2)
+missing_df = pd.DataFrame({'count': missing, 'pct': missing_pct})
+print("Missing values per column:")
+print(missing_df[missing_df['count'] > 0].sort_values('pct', ascending=False))
+```
+
+**Handling Missing Values:**
+
+The dataset has 1816 observations. The missingness pattern is as follows: `father_education` is missing for 16.2% of rows, `mother_education` for 13.4%, `weight` for 1.5%, and `education`, `tense`, and `smokenow` each have 1-2 missing values. No rows have missing `earnk`, `height`, `male`, `age`, `walk`, `exercise`, `angry`, or `ethnicity`.
+
+My strategy:
+
+- **`earnk` (target)**: No values are missing, but 187 observations (10.3%) have zero earnings. These represent unemployed individuals, stay-at-home parents, or other non-earners. I retain them in the dataset but address them in the log transform discussion below.
+- **`weight`** (27 missing): Per the data dictionary, these are cases where weight exceeded 500 lbs or was not recorded. I retain these rows and allow listwise deletion in models that use `weight`.
+- **`mother_education` and `father_education`** (244 and 295 missing): These represent "Don't Know" or blank survey responses. Because missingness is substantial (~15%) and likely not random (respondents who don't know their parents' education may differ systematically from those who do), I do not impute. I let listwise deletion handle these in relevant models, and I note that this reduces the sample size.
+- **`education`, `tense`, `smokenow`** (1-2 missing each): Negligible missingness; listwise deletion has minimal impact.
+
+```{python}
+# No rows need dropping since earnk has no NAs
+# Create log_earnk for positive earners
+print(f"Total rows: {len(df)}")
+print(f"Rows with earnk == 0: {(df['earnk'] == 0).sum()} ({(df['earnk']==0).mean()*100:.1f}%)")
+print(f"Rows with earnk > 0: {(df['earnk'] > 0).sum()}")
+```
+
+#### Distribution of `earnk` (target variable)
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+
+# Raw earnk distribution
+axes[0].hist(df['earnk'].dropna(), bins=50, edgecolor='black', alpha=0.7)
+axes[0].set_title('Distribution of earnk')
+axes[0].set_xlabel('Earnings (thousands $)')
+axes[0].set_ylabel('Frequency')
+
+# earnk > 0 for log transform
+pos_earn = df.loc[df['earnk'] > 0, 'earnk']
+axes[1].hist(pos_earn, bins=50, edgecolor='black', alpha=0.7)
+axes[1].set_title('Distribution of earnk (earnk > 0)')
+axes[1].set_xlabel('Earnings (thousands $)')
+
+axes[2].hist(np.log(pos_earn), bins=50, edgecolor='black', alpha=0.7, color='green')
+axes[2].set_title('Distribution of log(earnk) (earnk > 0)')
+axes[2].set_xlabel('log(Earnings in thousands $)')
+
+plt.tight_layout()
+plt.show()
+```
+
+**Discussion: Log Transform of `earnk`**
+
+The raw distribution of `earnk` is strongly right-skewed: the median is \$16k, the mean is \$21k, and the maximum is \$400k. A small number of high earners create a long right tail. This skewness causes two problems for OLS regression: the residuals will be non-normal, and a few extreme observations will have outsized influence on the fitted line (high leverage).
+
+*Pros of log transform:*
+
+The log-transformed distribution (restricted to positive earners) is much more symmetric and approximately normal, better satisfying the homoscedasticity and normality assumptions of OLS. On a log scale, coefficients have a natural *multiplicative* (percentage) interpretation: a coefficient of 0.05 on a predictor means a one-unit increase in that predictor is associated with approximately a 5% increase in earnings. This is also more natural for income data, since the economic "meaning" of a \$5,000 raise differs greatly depending on whether your baseline is \$10k or \$100k. The log transform also reduces the influence of high-income outliers.
+
+*Cons of log transform:*
+
+We must exclude 187 observations (10.3%) with zero earnings. These zero earners are a substantively important group — they include the unemployed, retirees, stay-at-home parents, and others. Dropping them introduces **selection bias**: we are effectively modeling earnings *conditional on having positive income*, which is a different question than modeling earnings for the full population. Factors like gender and education affect both *whether* someone earns and *how much* they earn, so restricting to positive earners can distort estimated effects. Additionally, the percentage-change interpretation may be less intuitive for some audiences.
+
+**Decision:** I use `log(earnk)` as my target, restricting to respondents with positive earnings. This is standard in labor economics (Mincer earnings equations). The log-normal model better satisfies OLS assumptions. However, I acknowledge that excluding zero earners introduces selection bias, and findings should be interpreted as effects on earnings *among those who earn*.
+
+```{python}
+# Create log_earnk for positive earners
+df['log_earnk'] = np.where(df['earnk'] > 0, np.log(df['earnk']), np.nan)
+print(f"Rows with positive earnings (used in modeling): {df['log_earnk'].notna().sum()}")
+print(f"Rows excluded (earnk = 0): {df['log_earnk'].isna().sum()}")
+```
+
+#### Key variable distributions
+
+```{python}
+fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+
+axes[0, 0].hist(df['height'].dropna(), bins=30, edgecolor='black', alpha=0.7)
+axes[0, 0].set_title('Height (inches)')
+
+axes[0, 1].hist(df['weight'].dropna(), bins=30, edgecolor='black', alpha=0.7)
+axes[0, 1].set_title('Weight (pounds)')
+
+axes[0, 2].hist(df['age'].dropna(), bins=30, edgecolor='black', alpha=0.7)
+axes[0, 2].set_title('Age')
+
+axes[1, 0].hist(df['education'].dropna(), bins=18, edgecolor='black', alpha=0.7)
+axes[1, 0].set_title('Education (years)')
+
+if 'male' in df.columns:
+    df['male'].value_counts().plot(kind='bar', ax=axes[1, 1], edgecolor='black', alpha=0.7)
+    axes[1, 1].set_title('Gender (male=1)')
+    axes[1, 1].set_xticklabels(['Female (0)', 'Male (1)'], rotation=0)
+
+if 'ethnicity' in df.columns:
+    df['ethnicity'].value_counts().plot(kind='bar', ax=axes[1, 2], edgecolor='black', alpha=0.7)
+    axes[1, 2].set_title('Ethnicity')
+    axes[1, 2].tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+plt.show()
+```
+
+Notable observations from the distributions: the sample is approximately 63% female and 37% male. The education distribution is concentrated around 12 (high school) and 16 (college) years. The sample is predominantly White, with smaller Black, Hispanic, and Other groups. Age ranges from about 18 to 90 with a fairly uniform distribution.
+
+#### Key relationships with earnings
+
+```{python}
+fig, axes = plt.subplots(2, 3, figsize=(15, 9))
+
+pos_df = df.dropna(subset=['log_earnk'])
+
+axes[0, 0].scatter(pos_df['height'], pos_df['log_earnk'], alpha=0.1, s=5)
+axes[0, 0].set_xlabel('Height')
+axes[0, 0].set_ylabel('log(earnk)')
+axes[0, 0].set_title('Height vs log(earnk)')
+
+axes[0, 1].scatter(pos_df['weight'], pos_df['log_earnk'], alpha=0.1, s=5)
+axes[0, 1].set_xlabel('Weight')
+axes[0, 1].set_ylabel('log(earnk)')
+axes[0, 1].set_title('Weight vs log(earnk)')
+
+axes[0, 2].scatter(pos_df['education'], pos_df['log_earnk'], alpha=0.1, s=5)
+axes[0, 2].set_xlabel('Education')
+axes[0, 2].set_ylabel('log(earnk)')
+axes[0, 2].set_title('Education vs log(earnk)')
+
+axes[1, 0].scatter(pos_df['age'], pos_df['log_earnk'], alpha=0.1, s=5)
+axes[1, 0].set_xlabel('Age')
+axes[1, 0].set_ylabel('log(earnk)')
+axes[1, 0].set_title('Age vs log(earnk)')
+
+if 'male' in pos_df.columns:
+    pos_df.boxplot(column='log_earnk', by='male', ax=axes[1, 1])
+    axes[1, 1].set_title('log(earnk) by Gender')
+    axes[1, 1].set_xlabel('Male')
+
+if 'ethnicity' in pos_df.columns:
+    pos_df.boxplot(column='log_earnk', by='ethnicity', ax=axes[1, 2])
+    axes[1, 2].set_title('log(earnk) by Ethnicity')
+    axes[1, 2].tick_params(axis='x', rotation=45)
+
+plt.suptitle('')
+plt.tight_layout()
+plt.show()
+```
+
+The scatter plots reveal several patterns. Education has the clearest positive linear relationship with log earnings. Height shows a moderate positive association, but this is likely confounded by gender (as explored in part b). Age shows a hump-shaped pattern earnings rise through middle age and decline later suggesting a quadratic term would be appropriate. The boxplots confirm that males have higher median log earnings, and there are differences across ethnic groups, with White respondents having the highest median earnings in this 1990 sample.
+
+```{python}
+# Correlation heatmap for numeric variables
+numeric_cols = ['height', 'weight', 'male', 'age', 'education',
+                'mother_education', 'father_education', 'log_earnk',
+                'walk', 'exercise', 'smokenow', 'tense', 'angry']
+numeric_cols = [c for c in numeric_cols if c in df.columns]
+
+corr = df[numeric_cols].corr()
+fig, ax = plt.subplots(figsize=(10, 8))
+sns.heatmap(corr, annot=True, fmt='.2f', cmap='coolwarm', center=0, ax=ax)
+ax.set_title('Correlation Matrix')
+plt.tight_layout()
+plt.show()
+```
+
+The correlation matrix reveals key relationships relevant to confounding. The strongest correlation is between `height` and `male` (r = 0.71), followed by `mother_education` and `father_education` (r = 0.65), and `height` and `weight` (r = 0.55). These high correlations foreshadow the multicollinearity and confounding issues explored below. The correlation of `log_earnk` with `education` (0.33) and `male` (0.27) are the strongest predictor-target correlations.
+
+
+### (b) Height and Weight Confounds
+
+#### Model 1: Height only
+
+```{python}
+mod_height = smf.ols('log_earnk ~ height', data=df).fit()
+print(mod_height.summary())
+print("\nHeight coefficient 95% CI:")
+print(mod_height.conf_int().loc['height'])
+```
+
+#### Model 2: Weight only
+
+```{python}
+mod_weight = smf.ols('log_earnk ~ weight', data=df).fit()
+print(mod_weight.summary())
+print("\nWeight coefficient 95% CI:")
+print(mod_weight.conf_int().loc['weight'])
+```
+
+#### Model 3: Height and Weight together
+
+```{python}
+mod_hw = smf.ols('log_earnk ~ height + weight', data=df).fit()
+print(mod_hw.summary())
+print("\nCoefficient 95% CIs:")
+print(mod_hw.conf_int())
+```
+
+**What happened when height and weight are combined?**
+
+When fit separately, both height and weight are statistically significant positive predictors of log earnings. Height has a coefficient of approximately 0.057 (95% CI: [0.046, 0.068], p < 0.001), meaning each additional inch of height is associated with roughly 5.7% higher earnings. Weight has a smaller but still significant coefficient of approximately 0.004 (95% CI: [0.003, 0.005], p < 0.001).
+
+However, when both variables are included together, the weight coefficient drops dramatically to approximately 0.0007 and becomes *non-significant* (p $\approx$ 0.39), while the height coefficient barely changes ($\approx$ 0.054). This occurs because height and weight are correlated (r = 0.55): taller people tend to weigh more. Once we account for height, weight adds almost no additional explanatory power. The apparent bivariate relationship between weight and earnings was largely driven by the shared variation with height — weight was acting as a noisy proxy for height, not as an independent predictor.
+
+But why does height predict earnings? The key confound is **gender**.
+
+#### Model 4: Adding gender as a confounder
+
+```{python}
+mod_hwg = smf.ols('log_earnk ~ height + weight + male', data=df).fit()
+print(mod_hwg.summary())
+print("\nCoefficient 95% CIs:")
+print(mod_hwg.conf_int())
+```
+
+**Interpretation with gender included:**
+
+After adding `male` to the model, the height coefficient drops by more than half from 0.054 to approximately 0.024 and the weight coefficient is essentially zero ($\approx$ -0.00002, p $\approx$ 0.98). Meanwhile, `male` has a large and highly significant coefficient of approximately 0.37 (p < 0.001).
+
+This is textbook confounding. Gender (`male`) is correlated with both the predictors (men are taller, r = 0.71, and heavier, r = 0.47) and the outcome (men earn more). The causal structure is:
+
+- Male $\rightarrow$ taller/heavier (biological)
+- Male $\rightarrow$ higher earnings (labor market gender gap in 1990)
+- Therefore: taller/heavier $\rightarrow$ higher earnings (spurious, driven by gender)
+
+Once we control for gender, most of the apparent height "premium" evaporates. The residual height effect (coef $\approx$ 0.024, still significant at p = 0.006) may reflect a genuine but small height premium documented in the labor economics literature, or it could be explained by additional confounders. The weight effect disappears entirely.
+
+This demonstrates why including confounders is essential: without controlling for gender, we would falsely conclude that gaining weight increases your earnings.
+
+
+### (c) Education Coefficients
+
+#### Model 1: Parental education only (total effect)
+
+```{python}
+mod_parent_ed = smf.ols(
+    'log_earnk ~ mother_education + father_education',
+    data=df
+).fit()
+print("Model: Parental Education Only")
+print(mod_parent_ed.summary())
+```
+
+#### Model 2: Parental education + respondent's education
+
+```{python}
+mod_all_ed = smf.ols(
+    'log_earnk ~ mother_education + father_education + education',
+    data=df
+).fit()
+print("Model: Parental Education + Own Education")
+print(mod_all_ed.summary())
+```
+
+**Interpretation:**
+
+In the first model (parental education only), the coefficients capture the **total effect** of parental education on earnings. `mother_education` has a coefficient of approximately 0.014 and `father_education` approximately 0.009. These are relatively small and individually non-significant (p = 0.18 and p = 0.34 respectively), though the joint F-test of the model is significant (p = 0.024). The total effect of parental education on earnings is modest — a combined one-year increase in both parents' education is associated with roughly a 2.3% increase in earnings.
+
+In the second model (adding the respondent's own `education`), something striking happens: the parental education coefficients **reverse sign**. `mother_education` becomes -0.004 and `father_education` becomes -0.010 — both are now negative and non-significant. Meanwhile, `education` has a large coefficient of approximately 0.128 (p < 0.001), and the model R$^2$ jumps from 0.006 to 0.098.
+
+This sign reversal is explained by the mediator structure. The respondent's own education is a **mediator** on the causal path: Parental Education $\rightarrow$ Respondent's Education $\rightarrow$ Earnings. Parents with more education raise children who attain more education (r $\approx$ 0.36 between parental and own education), and more education leads to higher earnings.
+
+In the first model, the parental education coefficients absorb the *total* effect both the direct effect of parental education (social capital, networks, cultural knowledge) and the indirect effect flowing through the child's own education. In the second model, by conditioning on own education, we block the indirect path. The parental coefficients now represent only the *direct* effect of parental education on earnings, holding the child's education constant. The fact that these direct effects are essentially zero (and even slightly negative) suggests that virtually all of the parental education effect on earnings operates *indirectly* through its influence on the child's own educational attainment.
+
+The slight negative coefficients (though not significant) could arise from a form of Simpson's paradox: among people with the *same* level of education, those whose parents had higher education may have "underperformed" relative to their upbringing, while those from less-educated families who achieved the same education level may be more driven or talented — a selection effect. However, these coefficients are well within the range of sampling noise, and we should not over-interpret non-significant results.
+
+
+### (d) Potential Colliders
+
+**Collider bias** arises when we condition on a variable that is a common *effect* of two other variables. Conditioning on such a variable (by including it in a regression or by sample restriction) can create a spurious association between its causes, even if they are independent in the population.
+
+I identify the following potential collider concerns in this dataset:
+
+**1. Sample restriction to positive earners (earnk > 0):** This is arguably the most important collider concern. By taking the log transform, we restrict the sample to people who earn positive income. Labor force participation (having positive earnings) is itself influenced by both gender and education — women were less likely to work full-time in 1990, and more educated people are more likely to work. Conditioning on having positive earnings is equivalent to conditioning on a collider on the path:
+
+$$\text{Gender} \rightarrow \text{Positive Earnings} \leftarrow \text{Education}$$
+
+This means that among positive earners only, gender and education may appear to have a relationship that differs from the full population. For instance, among women who *do* earn positive income, education may have a stronger effect on earnings because only the most educated or motivated women entered the labor force in 1990. This is a form of **selection bias** related to collider conditioning.
+
+**2. Health behavior variables (`walk`, `exercise`, `smokenow`, `tense`, `angry`):** These are plausibly caused by multiple other variables in the model. For instance, `exercise` frequency is influenced by both education (more educated people exercise more, r = 0.18) and by earnings (higher income provides more leisure time and gym access). Similarly, `tense` and `angry` may be affected by both work conditions (related to earnings) and by demographic factors. If exercise or stress are colliders on certain causal paths, including them could open backdoor paths and distort the estimated effects of education or gender on earnings. For example, if both high education and high earnings independently cause more exercise, then conditioning on exercise would induce a spurious *negative* association between education and earnings through the opened collider path.
+
+**3. Weight as a potential collider:** Weight is influenced by socioeconomic status (through diet quality, stress, healthcare access — all affected by income and education) and also by health behaviors like exercise and age. If weight sits at the intersection of multiple causal pathways, conditioning on it in a model that includes SES and health variables could distort the relationships among these predictors.
+
+**4. Overcontrol bias via `education`:** While not a classical collider, conditioning on the respondent's own education when estimating the effect of parental education (as in part c) blocks the primary causal pathway and biases the estimate of the total effect toward zero. As we saw, the coefficients actually reversed sign. This is sometimes called "overcontrol bias" or "mediator bias" — it is structurally related to collider bias in that conditioning on a descendant of the treatment distorts the causal estimate.
+
+The lesson is that variable inclusion decisions must be guided by a **directed acyclic graph (DAG)** representing the assumed causal structure. Blindly including all available variables or selecting variables based solely on statistical significance and model fit can introduce as much bias as it removes. For each regression, we should ask: "What causal effect am I trying to estimate?" and include only the variables that block backdoor paths without opening collider paths or blocking the causal path of interest.
+
+
+## Problem 2: Optimizing a Predictive Model
+
+**Important methodological note:** AIC values can only be meaningfully compared across models fit on *the same set of observations* with the *same target variable*. Because several variables have missing values (especially `mother_education` and `father_education`), different model specifications would use different sample sizes due to listwise deletion, making their AIC values incomparable. To address this, I create a **common complete-case subset** that includes all variables I might use, and fit every candidate model on this same subset.
+
+```{python}
+# Create common complete-case subset for fair AIC comparison
+# Include all variables that might be used in any candidate model
+mdf = df.dropna(subset=['log_earnk', 'education', 'mother_education', 
+                         'father_education', 'weight', 'smokenow', 'tense']).copy()
+print(f"Complete-case subset size: {len(mdf)} (out of {len(df)} total, "
+      f"out of {df['log_earnk'].notna().sum()} positive earners)")
+print(f"Rows excluded due to missing values in any variable: {df['log_earnk'].notna().sum() - len(mdf)}")
+```
+
+### (a) Baseline Model
+
+```{python}
+# Baseline model: age, gender, education (on complete-case subset)
+mod_baseline = smf.ols('log_earnk ~ age + male + education', data=mdf).fit()
+print("Baseline Model: age + male + education")
+print(mod_baseline.summary())
+print(f"\nDeviance (sum of squared residuals): {mod_baseline.ssr:.4f}")
+print(f"AIC: {mod_baseline.aic:.4f}")
+```
+
+The baseline model with `age`, `male`, and `education` explains approximately 20% of the variance in log earnings (R$^2$ $\approx$ 0.21). All three predictors are highly significant. Each additional year of education is associated with roughly 12% higher earnings. Being male is associated with roughly 65% higher earnings (exp(0.51) $\approx$ 1.66). Each additional year of age is associated with about 1% higher earnings, though this linear specification misses the clearly non-linear (hump-shaped) age-earnings profile visible in the EDA.
+
+### (b) Feature Engineering and Variable Selection
+
+#### Feature engineering
+
+```{python}
+# Age squared (earnings have a quadratic/hump-shaped relationship with age)
+mdf['age_sq'] = mdf['age'] ** 2
+
+# Age-gender interaction (the age-earnings profile may differ by gender)
+mdf['age_male'] = mdf['age'] * mdf['male']
+
+# Education squared (test for non-linear returns to education)
+mdf['education_sq'] = mdf['education'] ** 2
+
+# Average parental education (combines mother and father education,
+# reducing collinearity between them; r = 0.65 between the two)
+mdf['parent_education_avg'] = mdf[['mother_education', 'father_education']].mean(axis=1)
+
+# Education-gender interaction (returns to education may differ by gender)
+mdf['education_male'] = mdf['education'] * mdf['male']
+
+# Physical activity index (combine walk + exercise into one feature)
+mdf['activity_index'] = mdf[['walk', 'exercise']].mean(axis=1)
+
+# Stress index (combine tense + angry; both reflect negative affect)
+mdf['stress_index'] = mdf[['tense', 'angry']].mean(axis=1)
+
+# BMI proxy (weight / height^2 * 703 for imperial units)
+mdf['bmi'] = mdf['weight'] / (mdf['height'] ** 2) * 703
+
+print(f"Working dataframe shape: {mdf.shape}")
+print(f"\nEngineered features:")
+print(f"  age_sq:                age^2 (captures hump-shaped age-earnings profile)")
+print(f"  age_male:              age x male (gender-specific age trajectories)")
+print(f"  education_sq:          education^2 (non-linear returns to schooling)")
+print(f"  parent_education_avg:  mean of mother and father education")
+print(f"  education_male:        education x male (gender-specific education returns)")
+print(f"  activity_index:        mean of walk and exercise frequency")
+print(f"  stress_index:          mean of tense and angry days")
+print(f"  bmi:                   body mass index from height and weight")
+```
+
+**Feature engineering rationale:**
+
+The most important engineered feature is **`age_sq`**. The EDA scatter plot of age vs. log earnings clearly shows a hump-shaped pattern: earnings rise steeply in early career, plateau around age 40-50, and decline among older workers (retirement, reduced hours). A linear age term forces a monotonic relationship and cannot capture this curvature. Including `age_sq` allows the model to fit a parabola, which should substantially improve fit. This is the standard specification in Mincer earnings equations in labor economics.
+
+The **`education_male`** interaction captures the possibility that the earnings return per year of education differs between men and women. In 1990, occupational segregation and discrimination may have meant that the earnings premium for additional education was not identical across genders.
+
+I combine `mother_education` and `father_education` into a single average (**`parent_education_avg`**) because they are highly correlated (r = 0.65). Including both separately creates multicollinearity without much additional predictive power compared to their average, and using the average provides a more stable single-parameter estimate.
+
+#### Model comparisons
+
+```{python}
+models = {}
+
+# M1: Baseline
+models['M1: baseline'] = smf.ols(
+    'log_earnk ~ age + male + education', data=mdf
+).fit()
+
+# M2: Add age squared (key non-linearity)
+models['M2: + age_sq'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education', data=mdf
+).fit()
+
+# M3: Add parental education
+models['M3: + parent_ed'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + parent_education_avg',
+    data=mdf
+).fit()
+
+# M4: Add ethnicity
+models['M4: + ethnicity'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + parent_education_avg + C(ethnicity)',
+    data=mdf
+).fit()
+
+# M5: Add education-gender and age-gender interactions
+models['M5: + interactions'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + education_male + age_male + parent_education_avg + C(ethnicity)',
+    data=mdf
+).fit()
+
+# M6: Add health/activity features
+models['M6: + health'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + education_male + age_male + parent_education_avg + C(ethnicity) + activity_index + smokenow + stress_index',
+    data=mdf
+).fit()
+
+# M7: Kitchen sink with education_sq
+models['M7: + ed_sq'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + education_sq + education_male + age_male + parent_education_avg + C(ethnicity) + activity_index + smokenow',
+    data=mdf
+).fit()
+
+# M8: Parsimonious — drop parent_ed and interactions
+models['M8: parsimonious'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + education_male + C(ethnicity)',
+    data=mdf
+).fit()
+
+# M9: Simple with parent_ed (no ethnicity or interactions)
+models['M9: simple+parent'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + parent_education_avg',
+    data=mdf
+).fit()
+
+# M10: Add BMI instead of raw height/weight
+models['M10: + bmi'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + parent_education_avg + C(ethnicity) + bmi',
+    data=mdf
+).fit()
+
+# M11: Stress + ethnicity, no interactions
+models['M11: + stress'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + parent_education_avg + C(ethnicity) + stress_index',
+    data=mdf
+).fit()
+
+# M12: Tuned — parental ed + ethnicity + education-gender interaction
+models['M12: tuned'] = smf.ols(
+    'log_earnk ~ age + age_sq + male + education + education_male + parent_education_avg + C(ethnicity)',
+    data=mdf
+).fit()
+
+# Print AIC comparison table — all on same N for valid comparison
+print(f"{'Model':<30} {'AIC':>10} {'BIC':>10} {'R-sq':>8} {'Adj R-sq':>8} {'N':>6}")
+print("-" * 78)
+for name, mod in sorted(models.items(), key=lambda x: x[1].aic):
+    print(f"{name:<30} {mod.aic:>10.2f} {mod.bic:>10.2f} {mod.rsquared:>8.4f} {mod.rsquared_adj:>8.4f} {int(mod.nobs):>6}")
+```
+
+```{python}
+# Verify all models use the same N (critical for valid AIC comparison)
+nobs_set = set(int(mod.nobs) for mod in models.values())
+print(f"Unique sample sizes across all models: {nobs_set}")
+if len(nobs_set) == 1:
+    print("All models use the same observations — AIC values are directly comparable.")
+else:
+    print("WARNING: Models have different sample sizes. AIC is not directly comparable!")
+```
+
+#### Best model summary
+
+```{python}
+# Identify best model by AIC
+best_name = min(models, key=lambda k: models[k].aic)
+best_model = models[best_name]
+print(f"Best model by AIC: {best_name}")
+print(f"AIC: {best_model.aic:.2f}")
+print()
+print(best_model.summary())
+```
+
+#### Residual diagnostics for the best model
+
+```{python}
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+# Residuals vs fitted
+axes[0].scatter(best_model.fittedvalues, best_model.resid, alpha=0.1, s=5)
+axes[0].axhline(y=0, color='red', linestyle='--')
+axes[0].set_xlabel('Fitted Values')
+axes[0].set_ylabel('Residuals')
+axes[0].set_title('Residuals vs Fitted')
+
+# QQ plot
+from scipy import stats
+stats.probplot(best_model.resid, plot=axes[1])
+axes[1].set_title('Q-Q Plot of Residuals')
+
+plt.tight_layout()
+plt.show()
+```
+
+**Discussion of the best model and variable selection:**
+
+Across all 12 candidate models (fit on the same complete-case subset for valid AIC comparison), the key findings are:
+
+**Most impactful improvement `age_sq`:** Adding the quadratic age term is by far the single biggest improvement over the baseline. Moving from M1 (linear age only) to M2 (with `age_sq`) produces the largest AIC drop in the entire model search. This makes sense: the age-earnings relationship is clearly non-linear, and a linear specification severely misrepresents it. The negative `age_sq` coefficient confirms the inverted-U shape: earnings rise through prime working years and decline afterwards.
+
+**Parental education (`parent_education_avg`):** Adding average parental education provides a consistent AIC improvement beyond education alone. Even after controlling for the respondent's own education, parental education has a small positive coefficient. In a *predictive* context (unlike the inference question in 1c), this is useful because it captures additional signal — perhaps reflecting social capital, financial support, or neighborhood effects that are correlated with but not fully explained by own education.
+
+**Ethnicity:** Adding ethnicity dummies provides a further small AIC improvement, reflecting earnings disparities across racial/ethnic groups that persist after controlling for education and other variables.
+
+**Interactions (`education_male`, `age_male`):** The `education_male` interaction is my candidate for most useful engineered feature. It allows the model to estimate different returns to education for men vs. women, which is economically plausible given the labor market conditions of 1990. However, the AIC improvement from interactions is modest and not always clearly better than simpler models — the extra parameters are penalized by AIC.
+
+**Excluded variables and reasoning:**
+
+- **`height` and `weight`** as raw variables: Excluded because their effects are largely confounded by gender (as shown in 1b). Including them alongside `male` provides no meaningful AIC improvement. However, `bmi` which combines height and weight into a single health-related metric does appear in the best model (M10). Unlike raw height, BMI captures body composition rather than stature, and its significant negative coefficient (≈ -0.016, p = 0.004) suggests that higher BMI is associated with lower earnings even after controlling for gender, possibly reflecting health-related productivity effects or workplace discrimination based on body weight.
+- **`mother_education` and `father_education` individually**: Not included separately because they are highly collinear (r = 0.65). Their average `parent_education_avg` captures equivalent information with half the parameters.
+- **Health variables (`walk`, `exercise`, `smokenow`, `tense`, `angry`)**: Including these individually or as indices (activity_index, stress_index) does not improve AIC. They have weak marginal associations with earnings after controlling for demographic and education variables. Additionally, as noted in Problem 1(d), some may act as colliders.
+- **`education_sq`**: Does not improve the model, suggesting returns to education are approximately log-linear (each additional year provides roughly the same percentage increase in earnings).
+
+**Collinear pairs avoided:** I do not include both `height` and `weight` together (r = 0.55), nor both `mother_education` and `father_education` separately (r = 0.65). In each case I use the more parsimonious alternative (height alone or `parent_education_avg`). Including collinear pairs inflates standard errors, wastes degrees of freedom, and does not improve predictive performance.
