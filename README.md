@@ -28,4 +28,6 @@ uv run quarto clean
 
 quarto preview c:/CunyCourses/Data622/Week1/Lab1/report.qmd --no-browser --no-watch-input
 
+Remove-Item -Recurse -Force Week1/Lab1/.git
+
   
