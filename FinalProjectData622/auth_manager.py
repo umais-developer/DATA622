@@ -90,16 +90,17 @@ def _create_flow():
 
 
 def _get_google_auth_url():
-    """Generate Google OAuth authorization URL and persist PKCE code_verifier."""
+    """Generate Google OAuth authorization URL (PKCE disabled for Streamlit compatibility)."""
     flow = _create_flow()
+    # Disable PKCE — code_verifier can't survive the redirect since
+    # st.session_state resets on new browser requests. PKCE isn't needed
+    # because we have a client_secret (confidential client).
+    flow.code_verifier = None
     auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
     )
-    # Persist PKCE code_verifier so it survives the redirect/rerun
-    st.session_state["oauth_state"] = state
-    st.session_state["oauth_code_verifier"] = flow.code_verifier
     return auth_url
 
 
@@ -107,8 +108,7 @@ def _handle_oauth_callback(code):
     """Exchange authorization code for tokens and authenticate user."""
     try:
         flow = _create_flow()
-        # Restore PKCE code_verifier from session (generated during auth URL)
-        flow.code_verifier = st.session_state.get("oauth_code_verifier")
+        flow.code_verifier = None  # Must match: PKCE disabled
         flow.fetch_token(code=code)
 
         from google.oauth2 import id_token
