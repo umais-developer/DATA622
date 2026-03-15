@@ -90,14 +90,16 @@ def _create_flow():
 
 
 def _get_google_auth_url():
-    """Generate Google OAuth authorization URL."""
+    """Generate Google OAuth authorization URL and persist PKCE code_verifier."""
     flow = _create_flow()
     auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
     )
+    # Persist PKCE code_verifier so it survives the redirect/rerun
     st.session_state["oauth_state"] = state
+    st.session_state["oauth_code_verifier"] = flow.code_verifier
     return auth_url
 
 
@@ -105,6 +107,8 @@ def _handle_oauth_callback(code):
     """Exchange authorization code for tokens and authenticate user."""
     try:
         flow = _create_flow()
+        # Restore PKCE code_verifier from session (generated during auth URL)
+        flow.code_verifier = st.session_state.get("oauth_code_verifier")
         flow.fetch_token(code=code)
 
         from google.oauth2 import id_token
