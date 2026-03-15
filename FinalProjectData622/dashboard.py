@@ -27,6 +27,11 @@ from decision_engine import calculate_reorder_point
 from model_training import PROPHET_AVAILABLE
 from data_adapter import load_yaml_config, is_synthetic_mode, get_pharmacy_name, validate_data, detect_drugs, save_yaml_config, validate_inventory_csv
 from cloud_storage import download_from_gcs, upload_to_gcs, is_gcs_enabled
+from auth_manager import require_auth, logout, is_auth_configured
+from user_db import (
+    list_users, add_user, remove_user, update_user_role,
+    create_invite, get_pending_invites, is_admin,
+)
 
 
 # =============================================================================
@@ -50,6 +55,13 @@ st.set_page_config(
     page_icon="💊",
     layout="wide",
 )
+
+# =============================================================================
+# AUTHENTICATION GATE
+# =============================================================================
+# Returns user info dict if authenticated, None if auth is not configured (demo mode).
+# If auth is configured but user is not logged in, this shows the login page and stops.
+current_user = require_auth()
 
 # =============================================================================
 # LOAD DATA
@@ -94,6 +106,14 @@ def load_cv_metrics():
 st.sidebar.title("💊 PharmaCast")
 st.sidebar.markdown("*Intelligent Inventory Management*")
 
+# User info and logout
+if current_user is not None:
+    st.sidebar.markdown(f"**{current_user.get('name', current_user['email'])}**")
+    st.sidebar.caption(current_user["email"])
+    if st.sidebar.button("Logout", use_container_width=True):
+        logout()
+    st.sidebar.divider()
+
 # Data source indicator
 _config = load_yaml_config()
 if is_synthetic_mode(_config):
@@ -103,9 +123,14 @@ else:
 
 st.sidebar.divider()
 
+# Build navigation list — admin page only for admin users
+_nav_pages = ["📊 Dashboard", "🔮 Forecasts", "📦 Reorder Alerts", "💰 Cost Analysis", "📈 EDA Explorer", "📤 Upload Data"]
+if current_user is not None and is_admin(current_user["email"]):
+    _nav_pages.append("👤 Admin")
+
 page = st.sidebar.radio(
     "Navigation",
-    ["📊 Dashboard", "🔮 Forecasts", "📦 Reorder Alerts", "💰 Cost Analysis", "📈 EDA Explorer", "📤 Upload Data"],
+    _nav_pages,
 )
 
 # =============================================================================
@@ -836,3 +861,105 @@ elif page == "📤 Upload Data":
             st.cache_data.clear()
             st.cache_resource.clear()
             st.rerun()
+
+
+# =============================================================================
+# ADMIN PAGE (only accessible to admin users)
+# =============================================================================
+elif page == "👤 Admin":
+    st.title("👤 User Management")
+    st.markdown("Manage who can access the PharmaCast dashboard.")
+
+    if current_user is None or not is_admin(current_user["email"]):
+        st.error("You do not have permission to access this page.")
+        st.stop()
+
+    # ---- Current Users ----
+    st.subheader("Authorized Users")
+    users = list_users()
+
+    if users:
+        user_data = []
+        for email, info in users.items():
+            user_data.append({
+                "Email": email,
+                "Name": info.get("name", ""),
+                "Role": info.get("role", "viewer"),
+                "Auth Type": ", ".join(info.get("auth_types", [])),
+                "Status": info.get("status", ""),
+                "Created": info.get("created", "")[:10],
+            })
+
+        user_table = pd.DataFrame(user_data)
+        st.dataframe(user_table, use_container_width=True, hide_index=True)
+
+    # ---- Add Google User ----
+    st.divider()
+    st.subheader("Grant Google Access")
+    st.markdown("Add a Google account that can sign in directly.")
+
+    with st.form("add_google_user"):
+        new_email = st.text_input("Google Email")
+        new_name = st.text_input("Name (optional)")
+        new_role = st.selectbox("Role", ["viewer", "admin"], index=0)
+        add_submitted = st.form_submit_button("Grant Access", use_container_width=True)
+
+    if add_submitted:
+        if not new_email or "@" not in new_email:
+            st.error("Please enter a valid email address.")
+        else:
+            add_user(new_email, role=new_role, auth_types=["google"], name=new_name)
+            if is_gcs_enabled():
+                upload_to_gcs()
+            st.success(f"Access granted to **{new_email}**. They can now sign in with Google.")
+            st.rerun()
+
+    # ---- Invite Email User ----
+    st.divider()
+    st.subheader("Invite Email User")
+    st.markdown("Generate an invite code for someone who will log in with email/password.")
+
+    with st.form("invite_email_user"):
+        invite_email = st.text_input("Email to invite")
+        invite_role = st.selectbox("Role", ["viewer", "admin"], index=0, key="invite_role")
+        invite_submitted = st.form_submit_button("Generate Invite Code", use_container_width=True)
+
+    if invite_submitted:
+        if not invite_email or "@" not in invite_email:
+            st.error("Please enter a valid email address.")
+        else:
+            code = create_invite(invite_email, role=invite_role)
+            if is_gcs_enabled():
+                upload_to_gcs()
+            st.success(f"Invite created for **{invite_email}**")
+            st.code(f"Invite Code: {code}", language=None)
+            st.info("Share this code with the user. They will enter it on the login page under **Activate Account**.")
+
+    # ---- Pending Invites ----
+    pending = get_pending_invites()
+    if pending:
+        st.divider()
+        st.subheader("Pending Invites")
+        for email, info in pending.items():
+            st.markdown(f"- **{email}** — code: `{info['code']}` (role: {info['role']}, created: {info['created'][:10]})")
+
+    # ---- Remove User ----
+    st.divider()
+    st.subheader("Remove User")
+
+    removable = [email for email in users if email != "umaisabdullah@gmail.com"]
+    if removable:
+        with st.form("remove_user"):
+            remove_email = st.selectbox("Select user to remove", removable)
+            remove_submitted = st.form_submit_button("Remove User", use_container_width=True)
+
+        if remove_submitted:
+            if remove_user(remove_email):
+                if is_gcs_enabled():
+                    upload_to_gcs()
+                st.success(f"Removed **{remove_email}**.")
+                st.rerun()
+            else:
+                st.error("Cannot remove the super admin.")
+    else:
+        st.info("No users to remove (you are the only user).")

@@ -22,6 +22,10 @@ EXPOSE 8080
 
 ENV PORT=8080
 ENV PHARMACAST_GCS_BUCKET=""
+# OAuth (leave empty to run without auth - demo mode)
+ENV GOOGLE_CLIENT_ID=""
+ENV GOOGLE_CLIENT_SECRET=""
+ENV OAUTH_REDIRECT_URI=""
 
 HEALTHCHECK CMD curl --fail http://localhost:${PORT}/_stcore/health || exit 1
 
