@@ -1,0 +1,26 @@
+# =============================================================================
+# PharmaCast - Pharmacy Configuration
+# =============================================================================
+# Edit this file to configure your pharmacy. No Python code changes needed.
+#
+# To use your own real data:
+#   1. Export daily sales from your pharmacy system as CSV
+#   2. Format: date,drug_name,units_sold,category (see data/sample_format.csv)
+#   3. Place your CSV at the path specified below (sales_csv)
+#   4. Set use_synthetic_data to false
+#   5. Run: python run_pipeline.py
+#   6. Run: streamlit run dashboard.py
+# =============================================================================
+
+pharmacy_name: "PharmaCast Demo"
+
+# Data source configuration
+data_source:
+  type: "csv"
+  sales_csv: "data/pharmacy_sales.csv"
+  # Optional: provide current stock levels for more accurate reorder recommendations
+  # Format: drug_name,units_on_hand (see data/sample_format.csv for details)
+  inventory_csv: null
+
+# Set to false when using real pharmacy data instead of synthetic
+use_synthetic_data: true

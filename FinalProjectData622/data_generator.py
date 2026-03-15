@@ -6,7 +6,7 @@ Generates HIPAA-compliant, realistic pharmacy sales logs that exhibit:
   - Weekly seasonality (weekend dips)
   - Long-term trend (growing customer base)
   - Holiday effects (demand spikes/drops around major holidays)
-  - Random noise (Poisson-distributed for count data)
+  - Poisson-distributed noise (proper count data distribution)
 
 Data sources used for calibration:
   - CDC FluView seasonal curves
@@ -58,7 +58,12 @@ def get_holiday_effect(date: datetime, us_holidays: dict) -> float:
 
 def generate_drug_sales(drug_name: str, drug_config: dict, seed: int = 42) -> pd.DataFrame:
     """
-    Generate daily sales data for a single drug.
+    Generate daily sales data for a single drug using Poisson noise.
+
+    The demand signal is computed deterministically from seasonality, weekly
+    patterns, trends, and holidays. The final count is drawn from a Poisson
+    distribution centered on the computed demand (with optional overdispersion
+    via a Negative Binomial approximation).
 
     Parameters
     ----------
@@ -75,12 +80,16 @@ def generate_drug_sales(drug_name: str, drug_config: dict, seed: int = 42) -> pd
         DataFrame with columns: date, drug_name, units_sold, category
     """
     rng = np.random.RandomState(seed)
-    us_holidays_cal = holidays.US(years=[2023, 2024, 2025])
+
+    # Extract years from simulation range
+    start_year = int(SIMULATION_START_DATE[:4])
+    end_year = int(SIMULATION_END_DATE[:4])
+    us_holidays_cal = holidays.US(years=list(range(start_year, end_year + 1)))
 
     dates = pd.date_range(start=SIMULATION_START_DATE, end=SIMULATION_END_DATE, freq="D")
     base = drug_config["base_daily_demand"]
     profile = SEASONAL_PROFILES[drug_config["seasonal_profile"]]
-    noise_std = drug_config["noise_std"]
+    noise_scale = drug_config.get("noise_scale", 0.15)
 
     records = []
     for i, date in enumerate(dates):
@@ -103,17 +112,19 @@ def generate_drug_sales(drug_name: str, drug_config: dict, seed: int = 42) -> pd
         holiday_mult = get_holiday_effect(date, us_holidays_cal)
         demand *= holiday_mult
 
-        # 6. Add random noise (Poisson-like for count data)
-        noise = rng.normal(0, noise_std)
-        demand += noise
-
-        # 7. Floor at 0 (can't sell negative units)
-        units_sold = max(0, int(round(demand)))
+        # 6. Poisson noise for count data (variance scales with mean)
+        # Use Negative Binomial for overdispersion control
+        demand = max(demand, 0.1)  # Ensure positive lambda
+        overdispersion = 1.0 + noise_scale  # >1 means overdispersed
+        # Negative Binomial parameterized via mean and dispersion
+        n_param = demand / (overdispersion - 1) if overdispersion > 1 else demand * 100
+        p_param = 1.0 / overdispersion if overdispersion > 1 else 0.99
+        units_sold = rng.negative_binomial(max(1, int(round(n_param))), min(0.99, max(0.01, p_param)))
 
         records.append({
             "date": date,
             "drug_name": drug_name,
-            "units_sold": units_sold,
+            "units_sold": int(units_sold),
             "category": drug_config["category"],
         })
 
@@ -131,6 +142,7 @@ def generate_all_data() -> pd.DataFrame:
     """
     print("=" * 60)
     print("  PHARMACY SYNTHETIC DATA GENERATOR")
+    print(f"  Date Range: {SIMULATION_START_DATE} to {SIMULATION_END_DATE}")
     print("=" * 60)
 
     all_frames = []

@@ -1,0 +1,11 @@
+date,drug_name,units_sold,category
+2024-01-01,Amoxicillin_500mg,22,Antibiotic
+2024-01-01,Metformin_500mg,31,Diabetes
+2024-01-01,Lisinopril_10mg,27,Blood Pressure
+2024-01-01,Albuterol_Inhaler,9,Respiratory
+2024-01-02,Amoxicillin_500mg,18,Antibiotic
+2024-01-02,Metformin_500mg,29,Diabetes
+2024-01-02,Lisinopril_10mg,24,Blood Pressure
+2024-01-02,Albuterol_Inhaler,11,Respiratory
+2024-01-03,Amoxicillin_500mg,20,Antibiotic
+2024-01-03,Metformin_500mg,33,Diabetes

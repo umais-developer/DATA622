@@ -19,14 +19,31 @@ import matplotlib.dates as mdates
 import seaborn as sns
 import holidays as holidays_lib
 
-from config import DRUG_CATALOG, TRAIN_TEST_SPLIT_DAYS
+from config import (
+    DRUG_CATALOG,
+    TRAIN_TEST_SPLIT_DAYS,
+    SIMULATION_START_DATE,
+    SIMULATION_END_DATE,
+    DATA_DIR,
+    get_active_catalog,
+)
+from data_adapter import load_pharmacy_data, load_yaml_config
 
 
-def load_data(filepath: str = "data/pharmacy_sales.csv") -> pd.DataFrame:
-    """Load and parse the generated sales data."""
-    df = pd.read_csv(filepath, parse_dates=["date"])
-    print(f"Loaded {len(df):,} records from {filepath}")
-    return df
+def load_data(filepath: str = None) -> pd.DataFrame:
+    """
+    Load pharmacy sales data.
+    Uses data_adapter for validation and config-driven path resolution.
+    Falls back to direct CSV load if data_adapter is unavailable.
+    """
+    if filepath is not None:
+        # Direct path override (e.g., from tests)
+        df = pd.read_csv(filepath, parse_dates=["date"])
+        print(f"Loaded {len(df):,} records from {filepath}")
+        return df
+
+    config = load_yaml_config()
+    return load_pharmacy_data(config)
 
 
 def prepare_prophet_data(df: pd.DataFrame, drug_name: str) -> pd.DataFrame:
@@ -48,7 +65,9 @@ def create_holiday_dataframe() -> pd.DataFrame:
     Prophet can incorporate holidays as special events that affect demand.
     We include major US holidays that impact pharmacy operations.
     """
-    us_holidays = holidays_lib.US(years=[2023, 2024, 2025, 2026])
+    start_year = int(SIMULATION_START_DATE[:4])
+    end_year = int(SIMULATION_END_DATE[:4])
+    us_holidays = holidays_lib.US(years=list(range(start_year, end_year + 2)))
 
     holiday_df = pd.DataFrame(
         [{"ds": date, "holiday": name} for date, name in us_holidays.items()]
@@ -85,18 +104,31 @@ def generate_eda_plots(df: pd.DataFrame, output_dir: str = "outputs"):
     os.makedirs(output_dir, exist_ok=True)
     sns.set_style("whitegrid")
 
-    # --- Plot 1: Daily Sales Time Series for All Drugs ---
-    fig, axes = plt.subplots(4, 2, figsize=(16, 14), sharex=True)
-    fig.suptitle("Daily Sales by Drug (2 Years)", fontsize=16, fontweight="bold")
+    date_range_str = f"{df['date'].min().strftime('%b %Y')} - {df['date'].max().strftime('%b %Y')}"
 
-    for idx, (drug_name, _) in enumerate(DRUG_CATALOG.items()):
-        ax = axes[idx // 2, idx % 2]
+    # --- Plot 1: Daily Sales Time Series for All Drugs ---
+    catalog = get_active_catalog()
+    n_drugs = len(catalog)
+    n_cols = 2
+    n_rows = max(1, (n_drugs + 1) // 2)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 3.5 * n_rows), sharex=True)
+    if n_drugs == 1:
+        axes = np.array([[axes]])
+    elif n_rows == 1:
+        axes = axes.reshape(1, -1)
+    fig.suptitle(f"Daily Sales by Drug ({date_range_str})", fontsize=16, fontweight="bold")
+
+    for idx, drug_name in enumerate(catalog.keys()):
+        ax = axes[idx // n_cols, idx % n_cols]
         drug_df = df[df["drug_name"] == drug_name]
         ax.plot(drug_df["date"], drug_df["units_sold"], linewidth=0.6, alpha=0.8)
         ax.set_title(drug_name.replace("_", " "), fontsize=11)
         ax.set_ylabel("Units Sold")
         ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+
+    for idx in range(n_drugs, n_rows * n_cols):
+        axes[idx // n_cols, idx % n_cols].set_visible(False)
 
     plt.tight_layout()
     fig.savefig(os.path.join(output_dir, "eda_daily_sales.png"), dpi=150, bbox_inches="tight")
@@ -109,12 +141,12 @@ def generate_eda_plots(df: pd.DataFrame, output_dir: str = "outputs"):
     monthly = pivot_data.groupby(["drug_name", "month"])["units_sold"].sum().reset_index()
     heatmap_data = monthly.pivot(index="drug_name", columns="month", values="units_sold")
 
-    fig, ax = plt.subplots(figsize=(18, 6))
+    fig, ax = plt.subplots(figsize=(20, 6))
     sns.heatmap(heatmap_data, cmap="YlOrRd", ax=ax, linewidths=0.5)
     ax.set_title("Monthly Total Sales Heatmap", fontsize=14, fontweight="bold")
     ax.set_xlabel("Month")
     ax.set_ylabel("Drug")
-    plt.xticks(rotation=45, ha="right", fontsize=8)
+    plt.xticks(rotation=45, ha="right", fontsize=7)
     plt.tight_layout()
     fig.savefig(os.path.join(output_dir, "eda_monthly_heatmap.png"), dpi=150, bbox_inches="tight")
     plt.close(fig)

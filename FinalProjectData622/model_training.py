@@ -2,7 +2,7 @@
 model_training.py - Time-Series Model Training (Objective B)
 
 Trains forecasting models for each drug to predict daily demand 30 days
-into the future.
+into the future. Uses per-drug tuned hyperparameters for optimal accuracy.
 
 Strategy:
   - Attempts to use Facebook Prophet (additive regression model)
@@ -14,7 +14,6 @@ Usage:
 """
 
 import os
-import json
 import pickle
 import warnings
 import pandas as pd
@@ -48,15 +47,18 @@ if not PROPHET_AVAILABLE:
 
 
 # =============================================================================
-# PROPHET-BASED MODEL
+# PROPHET-BASED MODEL (with per-drug tuned hyperparameters)
 # =============================================================================
-def build_prophet_model(holidays_df: pd.DataFrame) -> "Prophet":
-    """Create and configure a Prophet model instance."""
+def build_prophet_model(drug_name: str, holidays_df: pd.DataFrame, drug_config: dict = None) -> "Prophet":
+    """Create and configure a Prophet model with drug-specific hyperparameters."""
+    if drug_config is None:
+        drug_config = DRUG_CATALOG[drug_name]
+
     model = Prophet(
         growth="linear",
-        changepoint_prior_scale=0.05,
-        seasonality_prior_scale=10.0,
-        holidays_prior_scale=10.0,
+        changepoint_prior_scale=drug_config.get("changepoint_prior_scale", 0.05),
+        seasonality_prior_scale=drug_config.get("seasonality_prior_scale", 10.0),
+        holidays_prior_scale=drug_config.get("holidays_prior_scale", 10.0),
         yearly_seasonality=True,
         weekly_seasonality=True,
         daily_seasonality=False,
@@ -67,9 +69,9 @@ def build_prophet_model(holidays_df: pd.DataFrame) -> "Prophet":
     return model
 
 
-def train_prophet(drug_name, train_df, holidays_df, forecast_periods):
+def train_prophet(drug_name, train_df, holidays_df, forecast_periods, drug_config=None):
     """Train using Prophet and return forecast DataFrame."""
-    model = build_prophet_model(holidays_df)
+    model = build_prophet_model(drug_name, holidays_df, drug_config=drug_config)
     model.fit(train_df)
 
     future = model.make_future_dataframe(periods=forecast_periods, freq="D")
@@ -124,7 +126,7 @@ class HoltWintersWrapper:
         # Forecast future periods
         if n_future > 0:
             forecast_values = self.fitted.forecast(n_future)
-            forecast_values = forecast_values.values  # Convert to numpy array
+            forecast_values = forecast_values.values
         else:
             forecast_values = np.array([])
 
@@ -163,7 +165,6 @@ class HoltWintersWrapper:
 
     def make_future_dataframe(self, periods, freq="D"):
         """Create future dates DataFrame (Prophet-compatible API)."""
-        # Use the exact dates from training data + extend into future
         train_dates = self.train_df["ds"].sort_values().reset_index(drop=True)
         last_date = train_dates.iloc[-1]
         future_dates = pd.date_range(
@@ -223,10 +224,12 @@ def train_single_drug(
     df: pd.DataFrame,
     holidays_df: pd.DataFrame,
     models_dir: str = "models",
+    drug_catalog: dict = None,
 ) -> dict:
     """
     Train a forecasting model for a single drug.
     Automatically selects Prophet or Holt-Winters based on availability.
+    Uses per-drug hyperparameters from config for optimal accuracy.
     """
     print(f"\n{'='*50}")
     print(f"  Training model for: {drug_name}")
@@ -238,8 +241,12 @@ def train_single_drug(
     forecast_periods = len(test_df) + FORECAST_HORIZON_DAYS
 
     if PROPHET_AVAILABLE:
-        print("  Using: Facebook Prophet")
-        model, forecast = train_prophet(drug_name, train_df, holidays_df, forecast_periods)
+        catalog = drug_catalog or DRUG_CATALOG
+        drug_config = catalog[drug_name]
+        print(f"  Using: Facebook Prophet (tuned)")
+        print(f"    changepoint_prior: {drug_config.get('changepoint_prior_scale', 0.05)}")
+        print(f"    seasonality_prior: {drug_config.get('seasonality_prior_scale', 10.0)}")
+        model, forecast = train_prophet(drug_name, train_df, holidays_df, forecast_periods, drug_config=drug_config)
     else:
         print("  Using: Holt-Winters Exponential Smoothing")
         model, forecast = train_holtwinters(drug_name, train_df, forecast_periods)
@@ -260,14 +267,15 @@ def train_single_drug(
     }
 
 
-def train_all_drugs(save_dir: str = "models") -> dict:
-    """Train models for all drugs in the catalog."""
-    df = load_data()
+def train_all_drugs(save_dir: str = "models", drug_catalog: dict = None, data: pd.DataFrame = None) -> dict:
+    """Train models for all drugs in the catalog (or a custom catalog)."""
+    df = data if data is not None else load_data()
     holidays_df = create_holiday_dataframe()
+    catalog = drug_catalog or DRUG_CATALOG
 
     results = {}
-    for drug_name in DRUG_CATALOG.keys():
-        result = train_single_drug(drug_name, df, holidays_df, save_dir)
+    for drug_name in catalog.keys():
+        result = train_single_drug(drug_name, df, holidays_df, save_dir, drug_catalog=catalog)
         results[drug_name] = result
 
     backend = "Prophet" if PROPHET_AVAILABLE else "Holt-Winters"

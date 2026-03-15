@@ -1,9 +1,9 @@
-drug_name,category,action,urgency,order_quantity,order_cost,current_stock_est,days_stock_remaining,forecast_30d_demand,forecast_peak_daily,reorder_point
-Amoxicillin_500mg,Antibiotic,PLAN ORDER,MEDIUM,650,292.5,250,13.2,568,25.3,133
-Metformin_500mg,Diabetes,PLAN ORDER,MEDIUM,940,112.8,398,13.5,883,38.7,265
-Lisinopril_10mg,Blood Pressure,PLAN ORDER,MEDIUM,810,64.8,333,13.5,740,31.6,222
-Albuterol_Inhaler,Respiratory,MONITOR,LOW,280,7000.0,110,15.6,211,9.4,56
-Cetirizine_10mg,Allergy,MONITOR,LOW,340,51.0,168,17.7,284,14.3,66
-Azithromycin_250mg,Antibiotic,PLAN ORDER,MEDIUM,410,492.0,140,12.5,336,14.8,78
-Omeprazole_20mg,Gastrointestinal,PLAN ORDER,MEDIUM,670,67.0,265,13.9,573,24.9,172
-Sertraline_50mg,Mental Health,ORDER SOON,HIGH,670,120.6,202,11.3,536,22.9,214
+drug_name,category,action,urgency,order_quantity,order_cost,current_stock_est,days_stock_remaining,forecast_30d_demand,forecast_peak_daily,reorder_point,wastage_cost,understocking_cost,holding_cost,total_cost_of_ownership,service_level_pct,waste_rate_pct,expired_units_est,stockout_units_est
+Amoxicillin_500mg,Antibiotic,PLAN ORDER,MEDIUM,940,423.0,263,9.4,843,35.6,197,44.36,924.41,0.97,1392.74,31.2,0.0,0,580
+Metformin_500mg,Diabetes,PLAN ORDER,MEDIUM,1010,121.2,407,12.9,946,46.9,284,9.87,290.81,0.4,422.28,43.0,0.0,0,538
+Lisinopril_10mg,Blood Pressure,PLAN ORDER,MEDIUM,890,71.2,331,12.5,795,40.5,239,6.82,205.34,0.22,283.58,41.6,0.0,0,464
+Albuterol_Inhaler,Respiratory,PLAN ORDER,MEDIUM,490,12250.0,114,8.7,393,20.1,105,1300.21,22544.57,23.42,36118.2,29.0,0.0,0,279
+Cetirizine_10mg,Allergy,MONITOR,LOW,310,46.5,168,19.6,257,14.6,60,5.45,95.72,0.21,147.88,65.4,0.0,0,88
+Azithromycin_250mg,Antibiotic,PLAN ORDER,MEDIUM,550,660.0,143,9.4,458,22.5,107,72.45,1291.84,1.41,2025.7,31.2,0.0,0,314
+Omeprazole_20mg,Gastrointestinal,PLAN ORDER,MEDIUM,830,83.0,271,11.5,704,37.4,211,7.33,229.37,0.22,319.92,38.5,0.0,0,433
+Sertraline_50mg,Mental Health,ORDER SOON,HIGH,770,138.6,204,10.6,575,31.6,230,11.32,307.29,0.3,457.51,35.5,0.0,0,370

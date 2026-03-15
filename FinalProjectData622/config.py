@@ -1,9 +1,16 @@
 """
 config.py - Central configuration for the Pharmacy Inventory Management System.
 
-Contains drug catalog, demand parameters, seasonality profiles, and business rules.
+Contains drug catalog, demand parameters, seasonality profiles, business rules,
+and cost functions for wastage and understocking analysis.
+
+Configuration priority:
+  1. pharmacy_config.yaml (if present) — pharmacist-editable, no code changes needed
+  2. Environment variables (DATA_DIR, MODELS_DIR, OUTPUTS_DIR)
+  3. Hardcoded defaults below (used for synthetic data / demo mode)
 """
 
+import os
 import numpy as np
 
 # =============================================================================
@@ -19,7 +26,11 @@ DRUG_CATALOG = {
         "lead_time_days": 2,
         "safety_stock_days": 5,
         "seasonal_profile": "winter_spike",  # Flu/cold season
-        "noise_std": 4,
+        "noise_scale": 0.20,  # Poisson overdispersion factor
+        # Prophet hyperparameters (tuned per drug)
+        "changepoint_prior_scale": 0.1,
+        "seasonality_prior_scale": 15.0,
+        "holidays_prior_scale": 15.0,
     },
     "Metformin_500mg": {
         "category": "Diabetes",
@@ -29,7 +40,10 @@ DRUG_CATALOG = {
         "lead_time_days": 2,
         "safety_stock_days": 7,
         "seasonal_profile": "stable",  # Chronic med - steady demand
-        "noise_std": 3,
+        "noise_scale": 0.10,
+        "changepoint_prior_scale": 0.01,  # Stable trend
+        "seasonality_prior_scale": 5.0,
+        "holidays_prior_scale": 5.0,
     },
     "Lisinopril_10mg": {
         "category": "Blood Pressure",
@@ -39,7 +53,10 @@ DRUG_CATALOG = {
         "lead_time_days": 2,
         "safety_stock_days": 7,
         "seasonal_profile": "stable",
-        "noise_std": 3,
+        "noise_scale": 0.12,
+        "changepoint_prior_scale": 0.01,
+        "seasonality_prior_scale": 5.0,
+        "holidays_prior_scale": 5.0,
     },
     "Albuterol_Inhaler": {
         "category": "Respiratory",
@@ -49,7 +66,10 @@ DRUG_CATALOG = {
         "lead_time_days": 3,
         "safety_stock_days": 5,
         "seasonal_profile": "winter_spike",
-        "noise_std": 3,
+        "noise_scale": 0.25,
+        "changepoint_prior_scale": 0.1,
+        "seasonality_prior_scale": 15.0,
+        "holidays_prior_scale": 10.0,
     },
     "Cetirizine_10mg": {
         "category": "Allergy",
@@ -59,7 +79,10 @@ DRUG_CATALOG = {
         "lead_time_days": 2,
         "safety_stock_days": 5,
         "seasonal_profile": "spring_spike",  # Allergy season
-        "noise_std": 3,
+        "noise_scale": 0.20,
+        "changepoint_prior_scale": 0.15,  # Sharper seasonal transitions
+        "seasonality_prior_scale": 20.0,   # Strong seasonality
+        "holidays_prior_scale": 5.0,
     },
     "Azithromycin_250mg": {
         "category": "Antibiotic",
@@ -69,7 +92,10 @@ DRUG_CATALOG = {
         "lead_time_days": 2,
         "safety_stock_days": 5,
         "seasonal_profile": "winter_spike",
-        "noise_std": 3,
+        "noise_scale": 0.22,
+        "changepoint_prior_scale": 0.1,
+        "seasonality_prior_scale": 15.0,
+        "holidays_prior_scale": 10.0,
     },
     "Omeprazole_20mg": {
         "category": "Gastrointestinal",
@@ -79,7 +105,10 @@ DRUG_CATALOG = {
         "lead_time_days": 2,
         "safety_stock_days": 7,
         "seasonal_profile": "holiday_spike",  # Overeating seasons
-        "noise_std": 3,
+        "noise_scale": 0.15,
+        "changepoint_prior_scale": 0.05,
+        "seasonality_prior_scale": 12.0,
+        "holidays_prior_scale": 15.0,  # Strong holiday effect
     },
     "Sertraline_50mg": {
         "category": "Mental Health",
@@ -89,7 +118,10 @@ DRUG_CATALOG = {
         "lead_time_days": 2,
         "safety_stock_days": 10,
         "seasonal_profile": "winter_sad",  # Seasonal affective disorder
-        "noise_std": 2,
+        "noise_scale": 0.12,
+        "changepoint_prior_scale": 0.05,
+        "seasonality_prior_scale": 10.0,
+        "holidays_prior_scale": 5.0,
     },
 }
 
@@ -135,10 +167,10 @@ WEEKLY_PATTERN = {
 }
 
 # =============================================================================
-# SIMULATION PARAMETERS
+# SIMULATION PARAMETERS (Updated to 2024-2026 for current analysis)
 # =============================================================================
-SIMULATION_START_DATE = "2023-01-01"
-SIMULATION_END_DATE = "2024-12-31"  # 2 years of data
+SIMULATION_START_DATE = "2024-01-01"
+SIMULATION_END_DATE = "2026-02-26"  # ~2.15 years of data through today
 TREND_GROWTH_RATE = 0.0003  # ~0.03% daily growth (~11% annual)
 
 # =============================================================================
@@ -152,3 +184,58 @@ TRAIN_TEST_SPLIT_DAYS = 60  # Last 60 days held out for testing
 # =============================================================================
 REORDER_CONFIDENCE_THRESHOLD = 0.80  # Use 80th percentile for safety
 ORDER_ROUNDING = 10  # Round orders up to nearest 10 units
+
+# =============================================================================
+# COST FUNCTIONS FOR WASTAGE & UNDERSTOCKING
+# Economic analysis parameters per the project proposal
+# =============================================================================
+COST_PARAMS = {
+    # Wastage cost: cost of expired/wasted inventory
+    "wastage_disposal_cost_per_unit": 0.05,  # Disposal fee per unit
+    "wastage_fraction_of_unit_cost": 1.0,    # Full unit cost lost on expiration
+
+    # Understocking cost: cost of not having inventory when needed
+    "stockout_penalty_multiplier": 3.0,   # Lost sale + patient harm penalty (3x unit cost)
+    "emergency_order_surcharge": 1.5,     # Rush order costs 1.5x normal price
+    "lost_customer_cost": 5.00,           # Estimated cost of losing a patient to competitor
+
+    # Holding cost: cost of carrying inventory
+    "annual_holding_rate": 0.20,          # 20% of unit cost per year (storage, insurance, capital)
+    "daily_holding_rate": 0.20 / 365,     # Daily rate derived from annual
+
+    # Service level targets
+    "target_service_level": 0.95,         # 95% fill rate target
+    "target_waste_rate": 0.02,            # Max 2% waste rate target
+}
+
+# =============================================================================
+# CONFIGURABLE PATHS (overridable via environment variables)
+# =============================================================================
+DATA_DIR = os.environ.get("PHARMACAST_DATA_DIR", "data")
+MODELS_DIR = os.environ.get("PHARMACAST_MODELS_DIR", "models")
+OUTPUTS_DIR = os.environ.get("PHARMACAST_OUTPUTS_DIR", "outputs")
+
+
+# =============================================================================
+# RUNTIME CATALOG OVERRIDE (used by dashboard upload feature)
+# =============================================================================
+_CATALOG_OVERRIDE = None
+
+
+def get_active_catalog() -> dict:
+    """Return the currently active drug catalog (override or default)."""
+    if _CATALOG_OVERRIDE is not None:
+        return _CATALOG_OVERRIDE
+    return DRUG_CATALOG
+
+
+def set_catalog_override(catalog: dict):
+    """Override DRUG_CATALOG at runtime (used by upload feature)."""
+    global _CATALOG_OVERRIDE
+    _CATALOG_OVERRIDE = catalog
+
+
+def clear_catalog_override():
+    """Reset to default catalog."""
+    global _CATALOG_OVERRIDE
+    _CATALOG_OVERRIDE = None
