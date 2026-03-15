@@ -2,7 +2,7 @@
 auth_manager.py - Authentication manager for PharmaCast.
 
 Handles:
-  - Google OAuth 2.0 sign-in (using google-auth-oauthlib)
+  - Google OAuth 2.0 sign-in (direct HTTP — no PKCE, no library quirks)
   - Email/password login with invite-code activation
   - Session management via Streamlit session state
   - Graceful fallback: if OAuth is not configured, auth is bypassed
@@ -14,12 +14,18 @@ Environment variables (required for Google OAuth):
 """
 
 import os
+import urllib.parse
 import streamlit as st
 
 from user_db import (
     get_user, is_authorized, is_admin,
     verify_invite, complete_invite, hash_password, verify_password,
 )
+
+# Google OAuth endpoints
+_GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_SCOPES = "openid email profile"
 
 
 def is_auth_configured():
@@ -58,64 +64,61 @@ def logout():
 
 
 # =============================================================================
-# Google OAuth flow
+# Google OAuth flow (direct HTTP — no google-auth-oauthlib, no PKCE)
 # =============================================================================
 
 def _get_redirect_uri():
     return os.environ.get("OAUTH_REDIRECT_URI", "http://localhost:8501")
 
 
-def _create_flow():
-    from google_auth_oauthlib.flow import Flow
-
-    redirect_uri = _get_redirect_uri()
-
-    # Allow HTTP for local development
-    if redirect_uri.startswith("http://localhost"):
-        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-
-    flow = Flow.from_client_config(
-        client_config={
-            "web": {
-                "client_id": os.environ["GOOGLE_CLIENT_ID"],
-                "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
-        scopes=["openid", "email", "profile"],
-        redirect_uri=redirect_uri,
-    )
-    return flow
-
-
 def _get_google_auth_url():
-    """Generate Google OAuth authorization URL (PKCE disabled for Streamlit compatibility)."""
-    flow = _create_flow()
-    # Disable PKCE — code_verifier can't survive the redirect since
-    # st.session_state resets on new browser requests. PKCE isn't needed
-    # because we have a client_secret (confidential client).
-    flow.code_verifier = None
-    auth_url, state = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
-        prompt="consent",
-    )
-    return auth_url
+    """Build Google OAuth authorization URL manually. No PKCE, no library."""
+    params = {
+        "client_id": os.environ["GOOGLE_CLIENT_ID"],
+        "redirect_uri": _get_redirect_uri(),
+        "response_type": "code",
+        "scope": _GOOGLE_SCOPES,
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    return f"{_GOOGLE_AUTH_URL}?{urllib.parse.urlencode(params)}"
 
 
 def _handle_oauth_callback(code):
-    """Exchange authorization code for tokens and authenticate user."""
-    try:
-        flow = _create_flow()
-        flow.code_verifier = None  # Must match: PKCE disabled
-        flow.fetch_token(code=code)
+    """Exchange authorization code for tokens using direct HTTP POST."""
+    import json
+    import urllib.request
 
+    try:
+        # Exchange code for tokens
+        token_data = urllib.parse.urlencode({
+            "code": code,
+            "client_id": os.environ["GOOGLE_CLIENT_ID"],
+            "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
+            "redirect_uri": _get_redirect_uri(),
+            "grant_type": "authorization_code",
+        }).encode()
+
+        req = urllib.request.Request(
+            _GOOGLE_TOKEN_URL,
+            data=token_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        with urllib.request.urlopen(req) as resp:
+            token_response = json.loads(resp.read().decode())
+
+        id_token_jwt = token_response.get("id_token")
+        if not id_token_jwt:
+            st.session_state["auth_error"] = "No ID token in response from Google."
+            st.query_params.clear()
+            return
+
+        # Verify and decode the ID token
         from google.oauth2 import id_token
         from google.auth.transport import requests as google_requests
 
         id_info = id_token.verify_oauth2_token(
-            flow.credentials.id_token,
+            id_token_jwt,
             google_requests.Request(),
             os.environ["GOOGLE_CLIENT_ID"],
         )
