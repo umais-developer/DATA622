@@ -26,6 +26,20 @@ from data_preprocessing import prepare_prophet_data, create_holiday_dataframe
 from decision_engine import calculate_reorder_point
 from model_training import PROPHET_AVAILABLE
 from data_adapter import load_yaml_config, is_synthetic_mode, get_pharmacy_name, validate_data, detect_drugs, save_yaml_config, validate_inventory_csv
+from cloud_storage import download_from_gcs, upload_to_gcs, is_gcs_enabled
+
+
+# =============================================================================
+# STARTUP: Restore persisted data from GCS (runs once per container)
+# =============================================================================
+@st.cache_resource
+def _startup_gcs_sync():
+    restored = download_from_gcs()
+    if restored:
+        st.cache_data.clear()
+    return restored
+
+_startup_gcs_sync()
 
 
 # =============================================================================
@@ -754,7 +768,13 @@ elif page == "📤 Upload Data":
                     }
                     save_yaml_config(new_config)
 
-                    # Step 5: Clear all Streamlit caches
+                    # Step 5: Persist to cloud storage
+                    if is_gcs_enabled():
+                        status.update(label="Saving to cloud storage...", state="running")
+                        n_uploaded = upload_to_gcs()
+                        st.write(f"Synced {n_uploaded} files to cloud storage.")
+
+                    # Step 6: Clear all Streamlit caches
                     st.cache_data.clear()
                     st.cache_resource.clear()
 
@@ -795,6 +815,8 @@ elif page == "📤 Upload Data":
                 },
             }
             save_yaml_config(demo_config)
+            if is_gcs_enabled():
+                upload_to_gcs()
             clear_catalog_override()
             st.cache_data.clear()
             st.cache_resource.clear()

@@ -1,0 +1,51 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'FinalProjectData622/**'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: rxportal
+  REGION: us-central1
+  SERVICE: pharmacast
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FinalProjectData622
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          source: .
+          env_vars: |
+            PHARMACAST_GCS_BUCKET=pharmacast-rxportal-data
+          flags: |
+            --memory=2Gi
+            --cpu=2
+            --timeout=300
+            --allow-unauthenticated
+
+      - name: Show URL
+        run: echo "Deployed to ${{ steps.deploy.outputs.url }}"

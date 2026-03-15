@@ -21,6 +21,7 @@ RUN python run_pipeline.py
 EXPOSE 8080
 
 ENV PORT=8080
+ENV PHARMACAST_GCS_BUCKET=""
 
 HEALTHCHECK CMD curl --fail http://localhost:${PORT}/_stcore/health || exit 1
 

@@ -9,3 +9,4 @@ streamlit>=1.29.0
 statsmodels>=0.14.1
 holidays>=0.40
 pyyaml>=6.0
+google-cloud-storage>=2.14.0
