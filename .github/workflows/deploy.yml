@@ -38,7 +38,7 @@ jobs:
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
-          source: .
+          source: FinalProjectData622
           env_vars: |
             PHARMACAST_GCS_BUCKET=pharmacast-rxportal-data
           flags: |
