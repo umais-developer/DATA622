@@ -30,48 +30,54 @@ from model_training import train_all_drugs
 
 
 # =============================================================================
-# COST FUNCTIONS
+# COST FUNCTIONS — Aligned with Proposal Section 6
+#
+# Wastage (6.2): C_w(t) = max(F_t - A_t, 0) * (c_unit * p_exp + c_hold)
+# Stockout (6.3): C_s(t) = max(A_t - F_t, 0) * (alpha * c_unit + c_emergency + c_churn)
+# Total (6.4):    L(t)   = C_w(t) + C_s(t)
 # =============================================================================
+def _get_expiration_probability(shelf_life_days: int) -> float:
+    """Estimate p_exp based on shelf life (proposal Section 6.2)."""
+    if shelf_life_days <= 365:
+        return COST_PARAMS["expiration_prob_short_shelf"]  # 0.05
+    return COST_PARAMS["expiration_prob_long_shelf"]        # 0.02
+
+
 def calculate_wastage_cost(
     excess_units: float,
     unit_cost: float,
     shelf_life_days: int,
-    days_in_stock: float,
+    days_in_stock: float = 0,
 ) -> dict:
     """
-    Calculate the cost of inventory wastage due to expiration.
+    Calculate wastage cost per proposal Section 6.2.
+
+    C_w = max(F - A, 0) * (c_unit * p_exp + c_hold)
 
     Parameters
     ----------
     excess_units : float
-        Units that will expire before being sold.
+        Units over actual demand (F - A when F > A).
     unit_cost : float
-        Cost per unit of the drug.
+        Cost per unit of the drug (c_unit).
     shelf_life_days : int
-        Shelf life in days.
+        Shelf life in days (used to estimate p_exp).
     days_in_stock : float
-        Estimated days inventory has been in stock.
-
-    Returns
-    -------
-    dict
-        Breakdown of wastage costs.
+        Not used in proposal formula; kept for API compatibility.
     """
-    # Units at risk of expiration
-    expiration_risk = max(0, days_in_stock / shelf_life_days)  # 0 to 1 scale
-    units_wasted = max(0, excess_units * min(1.0, expiration_risk))
+    excess = max(0, excess_units)
+    p_exp = _get_expiration_probability(shelf_life_days)
+    c_hold = COST_PARAMS["daily_holding_cost_per_unit"]
 
-    # Cost components
-    product_loss = units_wasted * unit_cost * COST_PARAMS["wastage_fraction_of_unit_cost"]
-    disposal_cost = units_wasted * COST_PARAMS["wastage_disposal_cost_per_unit"]
-    total_wastage_cost = product_loss + disposal_cost
+    # Proposal formula: excess * (c_unit * p_exp + c_hold)
+    per_unit_wastage_cost = unit_cost * p_exp + c_hold
+    total_wastage_cost = excess * per_unit_wastage_cost
 
     return {
-        "units_at_risk": round(excess_units, 0),
-        "units_wasted_est": round(units_wasted, 0),
-        "expiration_risk_pct": round(expiration_risk * 100, 1),
-        "product_loss_cost": round(product_loss, 2),
-        "disposal_cost": round(disposal_cost, 2),
+        "units_at_risk": round(excess, 0),
+        "units_wasted_est": round(excess * p_exp, 0),
+        "expiration_prob": p_exp,
+        "per_unit_wastage_cost": round(per_unit_wastage_cost, 4),
         "total_wastage_cost": round(total_wastage_cost, 2),
     }
 
@@ -79,47 +85,41 @@ def calculate_wastage_cost(
 def calculate_understocking_cost(
     stockout_units: float,
     unit_cost: float,
-    avg_daily_demand: float,
-    lead_time_days: int,
+    avg_daily_demand: float = 0,
+    lead_time_days: int = 0,
 ) -> dict:
     """
-    Calculate the cost of understocking (stockouts).
+    Calculate stockout cost per proposal Section 6.3.
+
+    C_s = max(A - F, 0) * (alpha * c_unit + c_emergency + c_churn)
 
     Parameters
     ----------
     stockout_units : float
-        Units of unmet demand during the forecast period.
+        Units of unmet demand (A - F when A > F).
     unit_cost : float
-        Cost per unit of the drug.
+        Cost per unit of the drug (c_unit).
     avg_daily_demand : float
-        Average daily demand.
+        Average daily demand (for stockout days estimate).
     lead_time_days : int
-        Supplier lead time in days.
-
-    Returns
-    -------
-    dict
-        Breakdown of understocking costs.
+        Kept for API compatibility.
     """
-    # Lost sales cost (units that couldn't be sold)
-    lost_sale_cost = stockout_units * unit_cost * COST_PARAMS["stockout_penalty_multiplier"]
+    deficit = max(0, stockout_units)
+    alpha = COST_PARAMS["asymmetric_alpha"]         # 10
+    c_emergency = COST_PARAMS["emergency_reorder_cost"]  # $1.50/unit
+    c_churn = COST_PARAMS["patient_churn_cost"]          # $5.00/unit
 
-    # Emergency order cost (rush orders to cover gap)
-    emergency_units = min(stockout_units, avg_daily_demand * lead_time_days)
-    emergency_cost = emergency_units * unit_cost * COST_PARAMS["emergency_order_surcharge"]
+    # Proposal formula: deficit * (alpha * c_unit + c_emergency + c_churn)
+    per_unit_stockout_cost = alpha * unit_cost + c_emergency + c_churn
+    total_understocking_cost = deficit * per_unit_stockout_cost
 
-    # Customer loss cost (patients going elsewhere)
-    stockout_days = stockout_units / max(avg_daily_demand, 1)
-    customer_loss = stockout_days * COST_PARAMS["lost_customer_cost"]
-
-    total_understocking_cost = lost_sale_cost + emergency_cost + customer_loss
+    stockout_days = deficit / max(avg_daily_demand, 1)
 
     return {
-        "stockout_units": round(stockout_units, 0),
+        "stockout_units": round(deficit, 0),
         "stockout_days_est": round(stockout_days, 1),
-        "lost_sale_cost": round(lost_sale_cost, 2),
-        "emergency_order_cost": round(emergency_cost, 2),
-        "customer_loss_cost": round(customer_loss, 2),
+        "per_unit_stockout_cost": round(per_unit_stockout_cost, 4),
+        "alpha": alpha,
         "total_understocking_cost": round(total_understocking_cost, 2),
     }
 
@@ -256,22 +256,101 @@ def calculate_reorder_point(drug_config: dict, avg_daily_demand: float) -> float
     return rop
 
 
+def calculate_cost_optimal_quantity(
+    forecast_mean: float,
+    forecast_lower: float,
+    forecast_upper: float,
+    unit_cost: float,
+    shelf_life_days: int,
+) -> tuple:
+    """
+    Find cost-optimal order quantity Q* per proposal Section 7.2.
+
+    Searches candidate quantities between y_lower and y_upper to minimize
+    the total asymmetric loss L = C_w + C_s.
+
+    Uses the newsvendor critical ratio: Q* = F^{-1}(c_s / (c_s + c_w))
+    where c_s is per-unit stockout cost and c_w is per-unit wastage cost.
+
+    Returns
+    -------
+    tuple of (optimal_quantity, asymmetric_loss_at_optimal)
+    """
+    from scipy.stats import norm
+
+    # Per-unit cost rates from proposal formulas
+    p_exp = _get_expiration_probability(shelf_life_days)
+    c_hold = COST_PARAMS["daily_holding_cost_per_unit"]
+    c_w = unit_cost * p_exp + c_hold  # Wastage cost per excess unit
+
+    alpha = COST_PARAMS["asymmetric_alpha"]
+    c_emergency = COST_PARAMS["emergency_reorder_cost"]
+    c_churn = COST_PARAMS["patient_churn_cost"]
+    c_s = alpha * unit_cost + c_emergency + c_churn  # Stockout cost per deficit unit
+
+    # Critical ratio (newsvendor): optimal quantile
+    critical_ratio = c_s / (c_s + c_w)
+
+    # Estimate demand distribution from Prophet intervals
+    # 80% CI → z = 1.2816
+    z_80 = 1.2816
+    std_est = max(1.0, (forecast_upper - forecast_lower) / (2 * z_80))
+
+    # Q* at the critical ratio quantile
+    q_star = norm.ppf(critical_ratio, loc=forecast_mean, scale=std_est)
+    q_star = max(0, q_star)
+
+    # Expected asymmetric loss at Q* (for reporting L_total)
+    # E[L] = c_w * E[max(Q-D,0)] + c_s * E[max(D-Q,0)]
+    z = (q_star - forecast_mean) / std_est
+    expected_excess = std_est * (z * norm.cdf(z) + norm.pdf(z))
+    expected_deficit = std_est * (-z * norm.cdf(-z) + norm.pdf(z))
+    asymmetric_loss = c_w * expected_excess + c_s * expected_deficit
+
+    return round(q_star, 0), round(asymmetric_loss, 2), round(critical_ratio, 4)
+
+
 def calculate_order_quantity(
     forecast_demand: float,
     current_stock: float,
     reorder_point: float,
     drug_config: dict,
-) -> int:
+    forecast_lower: float = None,
+    forecast_upper: float = None,
+) -> tuple:
     """
-    Calculate order quantity balancing wastage vs understocking.
+    Calculate order quantity using cost-optimal Q* from proposal Section 7.2.
+
+    Searches between y_lower and y_upper to minimize total asymmetric loss,
+    then subtracts current stock to get the net order quantity.
+
+    Returns
+    -------
+    tuple of (order_qty, asymmetric_loss, critical_ratio)
     """
-    target_stock = forecast_demand + (drug_config["safety_stock_days"] * (forecast_demand / FORECAST_HORIZON_DAYS))
-    order_qty = max(0, target_stock - current_stock)
+    # Use cost-optimal Q* if we have prediction intervals
+    if forecast_lower is not None and forecast_upper is not None:
+        q_star, asymmetric_loss, critical_ratio = calculate_cost_optimal_quantity(
+            forecast_mean=forecast_demand,
+            forecast_lower=forecast_lower,
+            forecast_upper=forecast_upper,
+            unit_cost=drug_config["unit_cost"],
+            shelf_life_days=drug_config["shelf_life_days"],
+        )
+        # Net order = Q* minus what we already have
+        target_stock = q_star + (drug_config["safety_stock_days"] * (forecast_demand / FORECAST_HORIZON_DAYS))
+        order_qty = max(0, target_stock - current_stock)
+    else:
+        # Fallback: use upper bound (old behavior)
+        target_stock = forecast_demand + (drug_config["safety_stock_days"] * (forecast_demand / FORECAST_HORIZON_DAYS))
+        order_qty = max(0, target_stock - current_stock)
+        asymmetric_loss = 0.0
+        critical_ratio = 0.0
 
     if order_qty > 0:
         order_qty = int(np.ceil(order_qty / ORDER_ROUNDING) * ORDER_ROUNDING)
 
-    return order_qty
+    return order_qty, asymmetric_loss, critical_ratio
 
 
 # =============================================================================
@@ -306,8 +385,9 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
         forecast_peak_demand = forecast_demand_array.max()
         avg_daily_demand = forecast_demand_array.mean()
 
-        # Use upper bound for conservative ordering (80th percentile)
-        conservative_demand = future_forecast["yhat_upper"].clip(lower=0).sum()
+        # Prediction interval totals for Q* optimization (proposal Section 7.2)
+        forecast_lower_total = future_forecast["yhat_lower"].clip(lower=0).sum()
+        forecast_upper_total = future_forecast["yhat_upper"].clip(lower=0).sum()
 
         # Calculate reorder point
         rop = calculate_reorder_point(drug_config, avg_daily_demand)
@@ -320,10 +400,12 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
         else:
             simulated_current_stock = int(historical_avg * 14)
 
-        # Determine order quantity
+        # Cost-optimal order quantity Q* (proposal Section 7.2)
         days_of_stock_remaining = simulated_current_stock / max(avg_daily_demand, 1)
-        order_qty = calculate_order_quantity(
-            conservative_demand, simulated_current_stock, rop, drug_config
+        order_qty, asymmetric_loss, critical_ratio = calculate_order_quantity(
+            forecast_total_demand, simulated_current_stock, rop, drug_config,
+            forecast_lower=forecast_lower_total,
+            forecast_upper=forecast_upper_total,
         )
         order_cost = order_qty * drug_config["unit_cost"]
 
@@ -396,6 +478,9 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
             "understocking_cost": understocking["total_understocking_cost"],
             "holding_cost": holding["holding_cost"],
             "total_cost_of_ownership": tco["total_cost_of_ownership"],
+            # Proposal Section 6.4: Asymmetric loss L_total
+            "asymmetric_loss": asymmetric_loss,
+            "critical_ratio": critical_ratio,
             "service_level_pct": round(service_level, 1),
             "waste_rate_pct": round(waste_rate, 1),
             "expired_units_est": int(sim["expired_units"]),
@@ -416,6 +501,7 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
         print(f"     Holding Cost:       ${holding['holding_cost']:>8.2f}")
         print(f"     Order Cost:         ${order_cost:>8.2f}")
         print(f"     TOTAL COST:         ${tco['total_cost_of_ownership']:>8.2f}")
+        print(f"     Asymmetric Loss:    ${asymmetric_loss:>8.2f}  (critical ratio: {critical_ratio:.4f})")
 
     rec_df = pd.DataFrame(recommendations)
     print("\n" + "=" * 70)
@@ -423,6 +509,7 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
     total_tco = rec_df["total_cost_of_ownership"].sum()
     total_wastage = rec_df["wastage_cost"].sum()
     total_understocking = rec_df["understocking_cost"].sum()
+    total_asymmetric_loss = rec_df["asymmetric_loss"].sum()
     critical_count = (rec_df["urgency"] == "CRITICAL").sum()
     avg_service = rec_df["service_level_pct"].mean()
     avg_waste = rec_df["waste_rate_pct"].mean()
@@ -433,6 +520,7 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
     print(f"  Total Wastage Cost:       ${total_wastage:>10,.2f}")
     print(f"  Total Understocking Cost: ${total_understocking:>10,.2f}")
     print(f"  Total Cost of Ownership:  ${total_tco:>10,.2f}")
+    print(f"  Asymmetric Loss (L_total):${total_asymmetric_loss:>10,.2f}")
     print(f"  {'='*40}")
     print(f"  Avg Service Level:  {avg_service:.1f}%  (Target: {COST_PARAMS['target_service_level']*100:.0f}%)")
     print(f"  Avg Waste Rate:     {avg_waste:.1f}%  (Target: <{COST_PARAMS['target_waste_rate']*100:.0f}%)")

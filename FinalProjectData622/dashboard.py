@@ -148,6 +148,14 @@ if page == "📊 Dashboard":
         col7.metric("⚠️ Understocking Cost", f"${total_understocking:,.2f}")
         col8.metric("✅ Avg Service Level", f"{avg_service:.1f}%")
 
+        # KPI Card - Row 3: Asymmetric Loss (Proposal Section 6.4)
+        if "asymmetric_loss" in rec_df.columns:
+            col9, col10, col11, col12 = st.columns(4)
+            total_asym_loss = rec_df["asymmetric_loss"].sum()
+            avg_cr = rec_df["critical_ratio"].mean() if "critical_ratio" in rec_df.columns else 0
+            col9.metric("⚖️ Asymmetric Loss (L_total)", f"${total_asym_loss:,.2f}")
+            col10.metric("📊 Avg Critical Ratio", f"{avg_cr:.4f}")
+
         st.divider()
 
         # Recommendations Table
@@ -484,22 +492,29 @@ elif page == "💰 Cost Analysis":
     st.dataframe(cost_table, use_container_width=True, hide_index=True)
 
     # Cost parameters reference
-    with st.expander("📖 Cost Model Parameters"):
+    with st.expander("📖 Cost Model Parameters (Proposal Section 6)"):
         st.markdown(f"""
-        **Wastage Cost Model:**
-        - Product loss: 100% of unit cost for expired inventory
-        - Disposal fee: ${COST_PARAMS['wastage_disposal_cost_per_unit']:.2f}/unit
+        **Wastage Cost Function C_w (Section 6.2):**
+        - Formula: `C_w = excess_units × (c_unit × p_exp + c_hold)`
+        - p_exp (expiration probability): {COST_PARAMS['expiration_prob_short_shelf']} (short shelf) / {COST_PARAMS['expiration_prob_long_shelf']} (long shelf)
+        - c_hold (daily holding cost): ${COST_PARAMS['daily_holding_cost_per_unit']:.2f}/unit/day
 
-        **Understocking Cost Model:**
-        - Stockout penalty: {COST_PARAMS['stockout_penalty_multiplier']}x unit cost (lost sales + patient harm)
-        - Emergency order surcharge: {COST_PARAMS['emergency_order_surcharge']}x normal price
-        - Lost customer cost: ${COST_PARAMS['lost_customer_cost']:.2f} per stockout day
+        **Stockout Cost Function C_s (Section 6.3):**
+        - Formula: `C_s = deficit_units × (α × c_unit + c_emergency + c_churn)`
+        - α (asymmetric multiplier): **{COST_PARAMS['asymmetric_alpha']}** — stockout is {COST_PARAMS['asymmetric_alpha']}× more costly than holding excess
+        - c_emergency (emergency reorder): ${COST_PARAMS['emergency_reorder_cost']:.2f}/unit
+        - c_churn (patient loss): ${COST_PARAMS['patient_churn_cost']:.2f}/unit
+
+        **Asymmetric Loss L_total (Section 6.4):**
+        - `L(t) = C_w(t) + C_s(t)` — minimized to find optimal order quantity Q*
+        - Q* selected at the **critical ratio quantile** of the forecast distribution
+        - Because α=10, Q* is near the 80th-90th percentile (prioritizes patient safety)
 
         **Holding Cost Model:**
         - Annual holding rate: {COST_PARAMS['annual_holding_rate']*100:.0f}% of unit cost
         - Includes: storage, insurance, capital costs
 
-        **Targets:**
+        **Targets (Section 7.4):**
         - Service Level: ≥{COST_PARAMS['target_service_level']*100:.0f}% fill rate
         - Waste Rate: <{COST_PARAMS['target_waste_rate']*100:.0f}%
         """)

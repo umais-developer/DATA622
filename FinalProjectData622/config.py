@@ -187,25 +187,38 @@ ORDER_ROUNDING = 10  # Round orders up to nearest 10 units
 
 # =============================================================================
 # COST FUNCTIONS FOR WASTAGE & UNDERSTOCKING
-# Economic analysis parameters per the project proposal
+# Aligned with proposal Section 6: Asymmetric Cost Functions
+#
+# Wastage (Section 6.2): C_w = max(F-A, 0) * (c_unit * p_exp + c_hold)
+# Stockout (Section 6.3): C_s = max(A-F, 0) * (alpha * c_unit + c_emergency + c_churn)
+# Total (Section 6.4):    L   = C_w + C_s
 # =============================================================================
 COST_PARAMS = {
-    # Wastage cost: cost of expired/wasted inventory
-    "wastage_disposal_cost_per_unit": 0.05,  # Disposal fee per unit
-    "wastage_fraction_of_unit_cost": 1.0,    # Full unit cost lost on expiration
+    # --- Proposal Section 6.3: Asymmetric penalty multiplier ---
+    # alpha=10: a stockout is ~10x more costly than holding one excess unit
+    # "encodes the clinical imperative" per proposal
+    "asymmetric_alpha": 10,
 
-    # Understocking cost: cost of not having inventory when needed
-    "stockout_penalty_multiplier": 3.0,   # Lost sale + patient harm penalty (3x unit cost)
-    "emergency_order_surcharge": 1.5,     # Rush order costs 1.5x normal price
-    "lost_customer_cost": 5.00,           # Estimated cost of losing a patient to competitor
+    # --- Proposal Section 6.3: Per-unit stockout cost components ---
+    # c_emergency: emergency reorder cost per stockout unit ($15-50 amortized)
+    "emergency_reorder_cost": 1.50,
+    # c_churn: patient switching to competitor per stockout unit
+    "patient_churn_cost": 5.00,
 
-    # Holding cost: cost of carrying inventory
-    "annual_holding_rate": 0.20,          # 20% of unit cost per year (storage, insurance, capital)
-    "daily_holding_rate": 0.20 / 365,     # Daily rate derived from annual
+    # --- Proposal Section 6.2: Wastage cost components ---
+    # p_exp: probability of expiration before sale (estimated by shelf life)
+    "expiration_prob_short_shelf": 0.05,   # 365-day shelf life drugs
+    "expiration_prob_long_shelf": 0.02,    # 730-day shelf life drugs
+    # c_hold: daily holding cost per unit ($0.02-$0.10/unit/day per proposal)
+    "daily_holding_cost_per_unit": 0.03,   # $0.03/unit/day (proposal example)
 
-    # Service level targets
-    "target_service_level": 0.95,         # 95% fill rate target
-    "target_waste_rate": 0.02,            # Max 2% waste rate target
+    # --- Holding cost: carrying inventory ---
+    "annual_holding_rate": 0.20,           # 20% of unit cost per year
+    "daily_holding_rate": 0.20 / 365,      # Daily rate derived from annual
+
+    # --- Service level targets (proposal Section 7.4) ---
+    "target_service_level": 0.95,          # >95% fill rate target
+    "target_waste_rate": 0.02,             # <2% waste rate target
 }
 
 # =============================================================================
