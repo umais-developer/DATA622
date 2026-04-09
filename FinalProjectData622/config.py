@@ -60,7 +60,7 @@ DRUG_CATALOG = {
     },
     "Albuterol_Inhaler": {
         "category": "Respiratory",
-        "base_daily_demand": 8,
+        "base_daily_demand": 9,
         "unit_cost": 25.00,
         "shelf_life_days": 365,
         "lead_time_days": 3,
