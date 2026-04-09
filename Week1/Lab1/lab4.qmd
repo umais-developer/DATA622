@@ -1,0 +1,746 @@
+---
+title: "Lab 4: NBA Player Evaluation Using Ridge Regression and the Lasso"
+author: "Umais Siddiqui"
+date: "2026-03-01"
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    fig-pos: "H"
+    geometry: margin=1in
+    fontsize: 11pt
+    linestretch: 1.15
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{python}
+#| label: setup
+#| include: false
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import Ridge, RidgeCV, LassoCV
+from sklearn.model_selection import cross_val_score
+from sklearn.utils import resample
+import warnings
+warnings.filterwarnings('ignore')
+
+sns.set_style("whitegrid")
+pd.set_option('display.max_columns', 25)
+pd.set_option('display.width', 120)
+pd.set_option('display.max_rows', 25)
+pd.set_option('display.float_format', '{:.3f}'.format)
+
+np.random.seed(622)
+```
+
+## Overview {.unnumbered}
+
+In this lab we use resampling techniques (cross-validation and the bootstrap) along with regularization (ridge regression and the lasso) to rank basketball players based on their performance during the 2022 NBA season. The central idea is **Regularized Adjusted Plus-Minus (RAPM)**: we model each stint (a continuous stretch where lineups remain fixed) as a linear function of which players are on the court, and recover a coefficient per player that measures their contribution to the team's scoring margin per 100 possessions.
+
+```{python}
+#| label: load-data
+
+nba_stints = pd.read_csv("DataSets/nba_stint_data.csv")
+
+player_ids = pd.read_csv("DataSets/player_id.csv")
+
+print(f"Stint data shape: {nba_stints.shape}")
+print(f"Number of players: {player_ids.shape[0]}")
+nba_stints.head(5)
+```
+
+```{python}
+#| label: prepare-matrices
+
+# Identify the player columns (columns from index 7 onward; 0-6 are metadata)
+player_cols = nba_stints.columns[7:]
+print(f"Number of player feature columns: {len(player_cols)}")
+
+# Build the stint matrix (X) and target vector (y)
+StintMatrix = nba_stints[player_cols]
+MarginVector = nba_stints['margin']
+WeightVector = nba_stints['n_pos']
+```
+
+# Problem 1: Ridge Regression for Inference
+
+## (a) Ordinary Linear Regression
+
+We fit an ordinary linear regression (OLS) to the stint data using `RidgeCV` with $\alpha = 10^{-8}$ (effectively zero regularization). Setting `fit_intercept=True` allows the model to capture home-court advantage. We evaluate the model using 5-fold cross-validation and compare the in-sample RMSE to the cross-validated RMSE.
+
+```{python}
+#| label: ols-fit
+
+from sklearn.model_selection import cross_val_predict
+
+# Fit OLS via Ridge with near-zero alpha
+model_ols = Ridge(alpha=1e-8, fit_intercept=True)
+model_ols.fit(StintMatrix.values, MarginVector.values)
+
+# In-sample predictions
+y_pred_ols = model_ols.predict(StintMatrix.values)
+
+# In-sample RMSE
+rmse_in_sample = np.sqrt(np.mean((MarginVector.values - y_pred_ols) ** 2))
+
+# Cross-validated RMSE using 5-fold CV
+cv_scores = cross_val_score(
+    Ridge(alpha=1e-8, fit_intercept=True),
+    StintMatrix.values, MarginVector.values,
+    cv=5, scoring='neg_mean_squared_error'
+)
+rmse_cv = np.sqrt(-cv_scores.mean())
+
+print(f"In-sample RMSE:        {rmse_in_sample:.4f}")
+print(f"Cross-validated RMSE:  {rmse_cv:.4f}")
+print(f"Ratio (CV / In-sample): {rmse_cv / rmse_in_sample:.4f}")
+print(f"\nIntercept (home court advantage): {model_ols.intercept_:.4f}")
+```
+
+The in-sample RMSE and cross-validated RMSE are quite close, with the CV RMSE only slightly higher. This indicates that overfitting is **not a major problem** in this setting. The reason is straightforward: while we have many parameters (one per player, ~500), we also have a large number of stints (observations), and the signal-to-noise ratio is inherently low in basketball margin data. The model is not memorizing the training data because each player appears in many different stints with many different teammates and opponents, making it difficult for the model to overfit to any individual observation.
+
+The intercept of the model represents the **home-court advantage** — the expected point differential per 100 possessions attributable to playing at home. Typical NBA home-court advantage is around 2-3 points per 100 possessions.
+
+## (b) Examining RAPM Coefficients
+
+We construct a dataframe linking each player's RAPM coefficient to their identity and total minutes played. Minutes are calculated by summing the `minutes` column from all stints where a player was on the court (i.e., where their coefficient is non-zero).
+
+```{python}
+#| label: ols-rapm-dataframe
+
+# Build RAPM dataframe - player column names are string IDs, convert to int for merging
+rapm_ols = pd.DataFrame({
+    'player_id': [int(c) for c in player_cols],
+    'RAPM': model_ols.coef_
+})
+
+# Calculate minutes played for each player
+# A player was on the court during a stint if their coefficient is non-zero (+1 or -1)
+minutes_played = []
+for col in player_cols:
+    on_court = nba_stints[col] != 0
+    total_minutes = nba_stints.loc[on_court, 'minutes'].sum()
+    minutes_played.append(total_minutes)
+
+rapm_ols['minutes_played'] = minutes_played
+```
+
+```{python}
+#| label: ols-rapm-merge
+
+# Merge RAPM with player names (player_ids has columns: player_id, player_name)
+rapm_ols = rapm_ols.merge(player_ids[['player_id', 'player_name']], on='player_id', how='left')
+
+# Sort by RAPM descending and show top 20
+rapm_ols_sorted = rapm_ols.sort_values('RAPM', ascending=False).reset_index(drop=True)
+print("Top 20 Players by OLS RAPM:")
+rapm_ols_sorted[['player_name', 'RAPM', 'minutes_played']].head(20)
+```
+
+```{python}
+#| label: fig-ols-rapm-scatter
+#| fig-cap: "OLS RAPM vs Minutes Played. Notice that extreme RAPM values are concentrated among low-minute players."
+#| fig-width: 8
+#| fig-height: 5
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.scatter(rapm_ols['minutes_played'], rapm_ols['RAPM'], alpha=0.5, s=20, color='steelblue')
+ax.set_xlabel('Minutes Played', fontsize=12)
+ax.set_ylabel('RAPM (OLS)', fontsize=12)
+ax.set_title('OLS RAPM vs Minutes Played', fontsize=14)
+ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+
+# Annotate some extreme low-minute players
+extreme = rapm_ols.nlargest(3, 'RAPM')
+for _, row in extreme.iterrows():
+    if row['minutes_played'] < 500:
+        ax.annotate(row['player_name'], (row['minutes_played'], row['RAPM']),
+                    fontsize=8, alpha=0.7, xytext=(5, 5), textcoords='offset points')
+
+plt.tight_layout()
+plt.show()
+```
+
+**Observations:**
+
+Looking at the top 20 players by OLS RAPM, we notice a striking pattern: **many of the highest-ranked players have very few minutes played**. These low-minute players appear at the top because they happened to be on the court during a few stints where their team performed exceptionally well (or the opponent performed poorly). With very few data points, OLS has no mechanism to shrink these extreme estimates back toward a reasonable value.
+
+This is a classic manifestation of the **high-variance, low-bias** problem. The OLS estimates are unbiased, but for players with few minutes, the variance is enormous. A player who appeared in only 50 minutes of game time could have an extreme RAPM simply due to random chance. Well-known star players — those who actually played significant minutes — tend to have more moderate RAPM values because their estimates are based on many more observations, averaging out the noise. This motivates regularization.
+
+## (c) Ridge Regression RAPM
+
+We use `RidgeCV` with a logarithmic grid of $\alpha$ values between $10^{-2}$ and $10^{5}$ to find the optimal regularization strength. Ridge regression shrinks coefficients toward zero, which will dampen the extreme RAPM estimates for low-minute players while preserving meaningful signal for high-minute players.
+
+```{python}
+#| label: ridge-fit
+
+# Define alpha grid on log scale
+alphas_ridge = np.logspace(-2, 5, 50)
+
+# Fit RidgeCV using efficient generalized cross-validation (default)
+model_ridge = RidgeCV(alphas=alphas_ridge, fit_intercept=True)
+model_ridge.fit(StintMatrix.values, MarginVector.values)
+
+alpha_opt = model_ridge.alpha_
+print(f"Optimal alpha: {alpha_opt:.4f}")
+print(f"Intercept (home court advantage): {model_ridge.intercept_:.4f}")
+
+# CV RMSE for the optimal model
+cv_scores_ridge = cross_val_score(
+    Ridge(alpha=alpha_opt, fit_intercept=True),
+    StintMatrix.values, MarginVector.values,
+    cv=5, scoring='neg_mean_squared_error'
+)
+rmse_cv_ridge = np.sqrt(-cv_scores_ridge.mean())
+print(f"Cross-validated RMSE (Ridge): {rmse_cv_ridge:.4f}")
+```
+
+```{python}
+#| label: ridge-rapm-dataframe
+
+# Build Ridge RAPM dataframe
+rapm_ridge = pd.DataFrame({
+    'player_id': [int(c) for c in player_cols],
+    'RAPM': model_ridge.coef_,
+    'minutes_played': minutes_played
+})
+
+rapm_ridge = rapm_ridge.merge(player_ids[['player_id', 'player_name']], on='player_id', how='left')
+
+# Sort by RAPM descending
+rapm_ridge_sorted = rapm_ridge.sort_values('RAPM', ascending=False).reset_index(drop=True)
+print("Top 20 Players by Ridge RAPM:")
+rapm_ridge_sorted[['player_name', 'RAPM', 'minutes_played']].head(20)
+```
+
+```{python}
+#| label: fig-ridge-rapm-scatter
+#| fig-cap: "Ridge RAPM vs Minutes Played. Regularization effectively shrinks extreme values for low-minute players."
+#| fig-width: 8
+#| fig-height: 5
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.scatter(rapm_ridge['minutes_played'], rapm_ridge['RAPM'], alpha=0.5, s=20, color='darkgreen')
+ax.set_xlabel('Minutes Played', fontsize=12)
+ax.set_ylabel('RAPM (Ridge)', fontsize=12)
+ax.set_title('Ridge RAPM vs Minutes Played', fontsize=14)
+ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+
+# Annotate top players
+top5 = rapm_ridge.nlargest(5, 'RAPM')
+for _, row in top5.iterrows():
+    ax.annotate(row['player_name'], (row['minutes_played'], row['RAPM']),
+                fontsize=8, alpha=0.8, xytext=(5, 5), textcoords='offset points')
+
+plt.tight_layout()
+plt.show()
+```
+
+**Observations:**
+
+The optimal $\alpha$ selected by cross-validation provides meaningful regularization. Compared to the OLS results, the Ridge RAPM rankings now feature recognizable NBA stars in the top 20 — players who are widely regarded as among the best in the league. The low-minute players who dominated the OLS top 20 have been shrunk toward zero, which is sensible: we have very little information about these players, so the prior assumption that they are average (RAPM $\approx 0$) is reasonable.
+
+The scatterplot confirms this: whereas the OLS plot showed extreme RAPM values scattered across low-minute players, the Ridge plot shows a funnel shape where higher-minute players can maintain larger (positive or negative) RAPM values because there is sufficient data to overcome the regularization penalty. Low-minute players are clustered near zero.
+
+# Problem 2: Possession Weights
+
+## (a) Heteroscedasticity in Stints
+
+```{python}
+#| label: fig-heteroscedasticity
+#| fig-cap: "Margin vs Number of Possessions. Variance in margin clearly decreases as the number of possessions increases."
+#| fig-width: 8
+#| fig-height: 5
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.scatter(nba_stints['n_pos'], nba_stints['margin'], alpha=0.3, s=10, color='steelblue')
+ax.set_xlabel('Number of Possessions', fontsize=12)
+ax.set_ylabel('Margin (Points per 100 Possessions)', fontsize=12)
+ax.set_title('Margin vs Number of Possessions in a Stint', fontsize=14)
+ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
+```
+
+**Observations:**
+
+The plot reveals clear **heteroscedasticity**: the variance of the margin variable decreases dramatically as the number of possessions increases. Short stints (few possessions) exhibit enormous variance in margin, while long stints show much tighter distributions centered near zero.
+
+This happens because the margin is defined as:
+$$\text{margin} = (\text{points\_home} - \text{points\_away}) \times \frac{100}{n\_\text{pos}}$$
+
+The $\frac{100}{n_\text{pos}}$ normalization factor amplifies random fluctuations in short stints. For example, if a stint lasts only 2 possessions and one team scores 3 points, the margin could be $\pm 150$ points per 100 possessions — an absurdly large value driven by small-sample noise. Statistically, if we model the raw point differential in a stint as having variance proportional to the number of possessions (as we would expect from a random process), then dividing by $n_\text{pos}$ and multiplying by 100 gives:
+
+$$\text{Var}(\text{margin}) \propto \frac{1}{n_\text{pos}}$$
+
+This means short stints have disproportionately high variance and should be down-weighted in our regression.
+
+## (b) Implementing Weighted Regression
+
+First, let us verify that the appropriate weight is $w_i = n\_\text{pos}_i$ by plotting $\text{margin} \times \sqrt{n\_\text{pos}}$ versus $n\_\text{pos}$. If the weights are correct, this transformed variable should have approximately constant variance.
+
+```{python}
+#| label: fig-weighted-margin
+#| fig-cap: "Margin × sqrt(n_pos) vs Number of Possessions. The variance is now approximately constant, confirming that weighting by n_pos is appropriate."
+#| fig-width: 8
+#| fig-height: 5
+
+weighted_margin = nba_stints['margin'] * np.sqrt(nba_stints['n_pos'])
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.scatter(nba_stints['n_pos'], weighted_margin, alpha=0.3, s=10, color='darkorange')
+ax.set_xlabel('Number of Possessions', fontsize=12)
+ax.set_ylabel('Margin × √(n_pos)', fontsize=12)
+ax.set_title('Variance-Stabilized Margin vs Number of Possessions', fontsize=14)
+ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
+```
+
+The transformed variable shows approximately constant variance across all stint lengths, confirming that $w_i = n\_\text{pos}_i$ is the correct weight. Now we refit the Ridge model with these weights.
+
+```{python}
+#| label: weighted-ridge-fit
+
+# Fit weighted RidgeCV using efficient generalized cross-validation (default)
+model_ridge_w = RidgeCV(alphas=alphas_ridge, fit_intercept=True)
+model_ridge_w.fit(StintMatrix.values, MarginVector.values, sample_weight=WeightVector.values)
+
+alpha_opt_w = model_ridge_w.alpha_
+print(f"Optimal alpha (weighted): {alpha_opt_w:.4f}")
+print(f"Intercept (home court advantage, weighted): {model_ridge_w.intercept_:.4f}")
+```
+
+```{python}
+#| label: weighted-ridge-rapm
+
+# Build weighted Ridge RAPM dataframe
+rapm_ridge_w = pd.DataFrame({
+    'player_id': [int(c) for c in player_cols],
+    'RAPM': model_ridge_w.coef_,
+    'minutes_played': minutes_played
+})
+
+rapm_ridge_w = rapm_ridge_w.merge(player_ids[['player_id', 'player_name']], on='player_id', how='left')
+
+# Sort and display top 20
+rapm_ridge_w_sorted = rapm_ridge_w.sort_values('RAPM', ascending=False).reset_index(drop=True)
+print("Top 20 Players by Weighted Ridge RAPM:")
+rapm_ridge_w_sorted[['player_name', 'RAPM', 'minutes_played']].head(20)
+```
+
+```{python}
+#| label: fig-weighted-ridge-scatter
+#| fig-cap: "Weighted Ridge RAPM vs Minutes Played."
+#| fig-width: 8
+#| fig-height: 5
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.scatter(rapm_ridge_w['minutes_played'], rapm_ridge_w['RAPM'], alpha=0.5, s=20, color='purple')
+ax.set_xlabel('Minutes Played', fontsize=12)
+ax.set_ylabel('RAPM (Weighted Ridge)', fontsize=12)
+ax.set_title('Weighted Ridge RAPM vs Minutes Played', fontsize=14)
+ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+
+top5_w = rapm_ridge_w.nlargest(5, 'RAPM')
+for _, row in top5_w.iterrows():
+    ax.annotate(row['player_name'], (row['minutes_played'], row['RAPM']),
+                fontsize=8, alpha=0.8, xytext=(5, 5), textcoords='offset points')
+
+plt.tight_layout()
+plt.show()
+```
+
+**Observations:**
+
+Incorporating possession-based weights changes the rankings in meaningful ways. The weighted model gives more influence to longer stints (which contain more reliable signal) and down-weights the noisy short stints. This has the effect of further stabilizing the RAPM estimates and producing rankings that better reflect sustained, reliable performance rather than small-sample flukes. The top players identified by the weighted model are high-minute contributors who consistently impact their team's scoring margin over many possessions.
+
+```{python}
+#| label: comparison-unweighted-weighted
+
+# Compare top 20 from unweighted vs weighted
+comparison = rapm_ridge_sorted[['player_name', 'RAPM']].head(20).rename(
+    columns={'RAPM': 'Unweighted_RAPM'}
+).reset_index(drop=True)
+
+comparison['Weighted_Rank'] = comparison['player_name'].apply(
+    lambda x: rapm_ridge_w_sorted[rapm_ridge_w_sorted['player_name'] == x].index[0] + 1
+    if x in rapm_ridge_w_sorted['player_name'].values else None
+)
+
+weighted_top = rapm_ridge_w_sorted[['player_name', 'RAPM']].head(20).rename(
+    columns={'RAPM': 'Weighted_RAPM'}
+).reset_index(drop=True)
+
+print("Side-by-side: Top 20 Unweighted vs Weighted Ridge RAPM")
+side_by_side = pd.DataFrame({
+    'Rank': range(1, 21),
+    'Unweighted': rapm_ridge_sorted['player_name'].head(20).values,
+    'Unw_RAPM': rapm_ridge_sorted['RAPM'].head(20).values.round(3),
+    'Weighted': rapm_ridge_w_sorted['player_name'].head(20).values,
+    'Wt_RAPM': rapm_ridge_w_sorted['RAPM'].head(20).values.round(3)
+})
+side_by_side
+```
+
+# Problem 3: Interpreting Bootstrap Uncertainty
+
+## (a) Bootstrap Confidence Intervals
+
+We use bootstrap resampling to construct 92% confidence intervals for the weighted Ridge RAPM coefficients. For each bootstrap iteration, we resample stints (rows) with replacement — importantly resampling the weights along with the observations — and refit the Ridge model using the optimal $\alpha$ found in Problem 2(b).
+
+```{python}
+#| label: bootstrap-ci
+
+n_bootstrap = 100
+n_stints = StintMatrix.shape[0]
+n_players = StintMatrix.shape[1]
+
+stint_mat_np = StintMatrix.values
+margin_np = MarginVector.values
+weight_np = WeightVector.values
+
+# Store bootstrap coefficients
+boot_coefs = np.zeros((n_bootstrap, n_players))
+
+for b in range(n_bootstrap):
+    # Resample indices with replacement
+    idx = np.random.choice(n_stints, size=n_stints, replace=True)
+
+    X_boot = stint_mat_np[idx]
+    y_boot = margin_np[idx]
+    w_boot = weight_np[idx]
+
+    # Fit ridge with the optimal alpha from weighted model (use Ridge, not RidgeCV, for speed)
+    model_boot = Ridge(alpha=alpha_opt_w, fit_intercept=True)
+    model_boot.fit(X_boot, y_boot, sample_weight=w_boot)
+
+    boot_coefs[b, :] = model_boot.coef_
+
+print(f"Bootstrap complete: {n_bootstrap} iterations")
+```
+
+```{python}
+#| label: bootstrap-ci-display
+
+# Calculate 92% confidence intervals (4th and 96th percentiles)
+ci_lower = np.percentile(boot_coefs, 4, axis=0)
+ci_upper = np.percentile(boot_coefs, 96, axis=0)
+boot_se = np.std(boot_coefs, axis=0)
+
+# Add to the weighted RAPM dataframe
+rapm_ridge_w['CI_lower'] = ci_lower
+rapm_ridge_w['CI_upper'] = ci_upper
+rapm_ridge_w['CI_width'] = ci_upper - ci_lower
+rapm_ridge_w['boot_se'] = boot_se
+
+# Show top 20 players with CIs
+rapm_ci_sorted = rapm_ridge_w.sort_values('RAPM', ascending=False).reset_index(drop=True)
+print("Top 20 Players - Weighted Ridge RAPM with 92% Bootstrap Confidence Intervals:")
+rapm_ci_sorted[['player_name', 'RAPM', 'CI_lower', 'CI_upper', 'CI_width', 'minutes_played']].head(20)
+```
+
+```{python}
+#| label: fig-bootstrap-ci
+#| fig-cap: "92% Bootstrap Confidence Intervals for the Top 20 RAPM Players. The horizontal bars show the uncertainty range; overlapping intervals indicate that the precise ranking is uncertain."
+#| fig-width: 8
+#| fig-height: 7
+
+top20 = rapm_ci_sorted.head(20).iloc[::-1]  # Reverse for plotting
+
+fig, ax = plt.subplots(figsize=(8, 7))
+y_pos = range(len(top20))
+
+ax.barh(y_pos, top20['RAPM'], height=0.4, color='steelblue', alpha=0.7, label='RAPM')
+ax.errorbar(top20['RAPM'], y_pos,
+            xerr=[top20['RAPM'] - top20['CI_lower'], top20['CI_upper'] - top20['RAPM']],
+            fmt='none', color='black', capsize=3, alpha=0.7, label='92% CI')
+
+ax.set_yticks(y_pos)
+ax.set_yticklabels(top20['player_name'], fontsize=9)
+ax.set_xlabel('RAPM', fontsize=12)
+ax.set_title('Top 20 Players: Weighted Ridge RAPM with 92% Bootstrap CIs', fontsize=13)
+ax.axvline(x=0, color='red', linestyle='--', alpha=0.5)
+ax.legend(loc='lower right')
+plt.tight_layout()
+plt.show()
+```
+
+**Observations:**
+
+The confidence intervals for the top 20 players show substantial overlap, which tells us that the precise ordering of players is uncertain. While we can be fairly confident that the top-ranked players are above average (their intervals generally exclude zero), we cannot say with certainty that the #1 player is truly better than the #10 player — the intervals overlap heavily. This is inherent to the noisy nature of basketball data: even with a full season's worth of stints, the signal attributable to any single player is relatively weak compared to the total variance in scoring margins.
+
+## (b) Impact of Minutes Played on Confidence Intervals
+
+```{python}
+#| label: fig-se-vs-minutes
+#| fig-cap: "Bootstrap Standard Error vs Minutes Played. Players with fewer minutes have much higher uncertainty in their RAPM estimates."
+#| fig-width: 8
+#| fig-height: 5
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.scatter(rapm_ridge_w['minutes_played'], rapm_ridge_w['boot_se'], alpha=0.5, s=20, color='coral')
+ax.set_xlabel('Minutes Played', fontsize=12)
+ax.set_ylabel('Bootstrap Standard Error', fontsize=12)
+ax.set_title('Bootstrap Standard Error vs Minutes Played', fontsize=14)
+plt.tight_layout()
+plt.show()
+```
+
+**Observations:**
+
+There is a clear negative relationship between minutes played and bootstrap standard error: players with fewer minutes have much larger standard errors. This makes both intuitive and statistical sense:
+
+- **Intuitively**: A player who was on the court for only 100 minutes across a few stints provides very limited data to estimate their true impact. Random fluctuations in scoring during those stints dominate the estimate. A player with 2,000+ minutes provides far more observations, and the law of large numbers ensures the estimate converges toward the true value.
+
+- **Statistically**: In regression, the standard error of a coefficient depends on the amount of variation in the corresponding feature. A player who appears in many stints (high minutes) has more non-zero entries in their column of the stint matrix, providing more information to estimate their coefficient precisely. The relationship is roughly $\text{SE} \propto 1/\sqrt{n_{\text{appearances}}}$, which is exactly the pattern we observe. Ridge regularization also plays a role: it shrinks low-information coefficients toward zero more aggressively, but the bootstrap standard errors still reflect the underlying uncertainty.
+
+## (c) Comparison to Bayesian Credible Intervals
+
+```{python}
+#| label: bayesian-se
+
+# Bayesian standard errors using the provided formula
+weights = WeightVector.values
+stint_mat = StintMatrix.values
+margin_vec = MarginVector.values
+
+# Weighted residual variance
+var = np.average(
+    (margin_vec - model_ridge_w.predict(stint_mat))**2,
+    weights=weights
+)
+num_players = stint_mat.shape[1]
+
+# Posterior precision matrix: X^T W X + alpha * I
+AMat = (stint_mat * weights.reshape(-1, 1)).T @ stint_mat + alpha_opt_w * np.eye(num_players)
+
+# Posterior covariance
+posterior_covariance = var * np.linalg.inv(AMat)
+
+# Bayesian standard errors
+se_bayesian = np.sqrt(np.diag(posterior_covariance))
+
+# Add to dataframe
+rapm_ridge_w['bayesian_se'] = se_bayesian
+
+# Bayesian 92% credible intervals
+from scipy.stats import norm
+z_val = norm.ppf(0.96)  # For 92% interval: 4% in each tail
+rapm_ridge_w['bayes_CI_lower'] = rapm_ridge_w['RAPM'] - z_val * se_bayesian
+rapm_ridge_w['bayes_CI_upper'] = rapm_ridge_w['RAPM'] + z_val * se_bayesian
+```
+
+```{python}
+#| label: fig-bayesian-vs-bootstrap-se
+#| fig-cap: "Comparison of Bayesian and Bootstrap Standard Errors vs Minutes Played."
+#| fig-width: 10
+#| fig-height: 5
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+# Panel 1: Both SEs vs minutes played
+axes[0].scatter(rapm_ridge_w['minutes_played'], rapm_ridge_w['boot_se'],
+                alpha=0.4, s=15, color='coral', label='Bootstrap SE')
+axes[0].scatter(rapm_ridge_w['minutes_played'], rapm_ridge_w['bayesian_se'],
+                alpha=0.4, s=15, color='steelblue', label='Bayesian SE')
+axes[0].set_xlabel('Minutes Played', fontsize=11)
+axes[0].set_ylabel('Standard Error', fontsize=11)
+axes[0].set_title('Standard Errors vs Minutes Played', fontsize=12)
+axes[0].legend()
+
+# Panel 2: Bootstrap SE vs Bayesian SE directly
+axes[1].scatter(rapm_ridge_w['bayesian_se'], rapm_ridge_w['boot_se'],
+                alpha=0.4, s=15, color='darkgreen')
+max_se = max(rapm_ridge_w['bayesian_se'].max(), rapm_ridge_w['boot_se'].max())
+axes[1].plot([0, max_se], [0, max_se], 'r--', alpha=0.5, label='y = x')
+axes[1].set_xlabel('Bayesian SE', fontsize=11)
+axes[1].set_ylabel('Bootstrap SE', fontsize=11)
+axes[1].set_title('Bootstrap vs Bayesian Standard Errors', fontsize=12)
+axes[1].legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: se-comparison-by-minutes
+
+# Quantify agreement by minutes-played bins
+rapm_ridge_w['minutes_bin'] = pd.cut(rapm_ridge_w['minutes_played'],
+                                      bins=[0, 200, 500, 1000, 2000, 4000],
+                                      labels=['0-200', '200-500', '500-1000', '1000-2000', '2000+'])
+
+se_comparison = rapm_ridge_w.groupby('minutes_bin', observed=True).agg(
+    mean_boot_se=('boot_se', 'mean'),
+    mean_bayes_se=('bayesian_se', 'mean'),
+    n_players=('player_id', 'count')
+).round(4)
+
+se_comparison['ratio_boot_to_bayes'] = (se_comparison['mean_boot_se'] / se_comparison['mean_bayes_se']).round(3)
+print("Mean Standard Errors by Minutes Played Bin:")
+se_comparison
+```
+
+**Observations:**
+
+The comparison between Bayesian and bootstrap standard errors reveals an important and somewhat counterintuitive divergence that depends on minutes played:
+
+- **Mid-range minutes (500-1000, agreement highest):** For players in this range, the Bayesian and bootstrap standard errors are closest in magnitude (ratio near 1.0). Both methods are producing similar uncertainty estimates because there is a moderate amount of data — enough for the estimates to be somewhat stable, but not so much that the prior becomes irrelevant.
+
+- **Low-minute players (disagreement highest):** For players with very few minutes (0-200), the **bootstrap standard errors are much smaller** than the Bayesian standard errors. This is initially surprising, but makes perfect sense: ridge regularization strongly shrinks low-minute player coefficients toward zero in *every* bootstrap sample. Since the estimate is always near zero regardless of which stints are resampled, the coefficient barely varies across bootstrap iterations, producing a small bootstrap SE. The Bayesian approach, by contrast, correctly captures the large *posterior* uncertainty — while the point estimate is near zero, the credible interval acknowledges that we genuinely have very little information about these players.
+
+- **High-minute players:** For high-minute players (2000+), the pattern reverses: bootstrap SE exceeds Bayesian SE. This happens because bootstrap resampling introduces genuine variability — different resamples produce meaningfully different coefficient estimates — while the Bayesian posterior is tightly constrained by the large amount of data.
+
+This divergence arises from a fundamental difference in what each method is measuring:
+
+- The **Bayesian credible interval** reflects posterior uncertainty *given the prior*. For low-minute players, the posterior remains broad because neither the prior nor the sparse data can pin down the coefficient precisely. The Bayesian SE properly communicates: "We don't know much about this player."
+
+- The **bootstrap confidence interval** measures the variability of the *estimator* across resampled datasets. For low-minute players, ridge regularization forces every bootstrap estimate to be near zero — the estimator is *stable* even though it is *uninformative*. This is a subtle but critical distinction: low bootstrap variability does not mean low uncertainty about the true parameter.
+
+**Which is more realistic?** For low-minute players, the **Bayesian standard errors are clearly more appropriate**. They correctly signal that we have very little information about these players. The bootstrap drastically underestimates uncertainty here because it confuses the stability of a heavily regularized estimator with genuine precision about the player's true ability. A general manager relying on bootstrap CIs would be falsely confident about low-minute players, which could lead to poor roster decisions. For high-minute players, both approaches are reasonable, though the moderate difference is less consequential since both methods agree on the rough magnitude of the uncertainty.
+
+# Extra Credit: Ridge vs Lasso
+
+## Ridge vs Lasso RAPM Comparison
+
+The Lasso uses an $L_1$ penalty that drives many coefficients to exactly zero, performing variable selection. This means the Lasso will effectively remove players from the model entirely if their contribution is not sufficiently supported by data.
+
+```{python}
+#| label: lasso-fit
+
+# Define alpha grid for Lasso (different scale than Ridge)
+alphas_lasso = np.logspace(-4, 2, 100)
+
+# Fit LassoCV with weighted regression
+model_lasso = LassoCV(alphas=alphas_lasso, fit_intercept=True, cv=5, max_iter=50000)
+model_lasso.fit(StintMatrix.values, MarginVector.values, sample_weight=WeightVector.values)
+
+alpha_opt_lasso = model_lasso.alpha_
+print(f"Optimal Lasso alpha: {alpha_opt_lasso:.6f}")
+print(f"Intercept: {model_lasso.intercept_:.4f}")
+print(f"Number of non-zero coefficients: {np.sum(model_lasso.coef_ != 0)} out of {n_players}")
+print(f"Number of zeroed-out players: {np.sum(model_lasso.coef_ == 0)}")
+```
+
+```{python}
+#| label: lasso-rapm-dataframe
+
+# Build Lasso RAPM dataframe
+rapm_lasso = pd.DataFrame({
+    'player_id': [int(c) for c in player_cols],
+    'RAPM_Lasso': model_lasso.coef_,
+    'minutes_played': minutes_played
+})
+rapm_lasso = rapm_lasso.merge(player_ids[['player_id', 'player_name']], on='player_id', how='left')
+
+# Merge with Ridge for comparison
+rapm_comparison = rapm_ridge_w[['player_id', 'player_name', 'RAPM', 'minutes_played']].rename(
+    columns={'RAPM': 'RAPM_Ridge'}
+).merge(
+    rapm_lasso[['player_id', 'RAPM_Lasso']], on='player_id'
+)
+
+rapm_comparison['diff_ridge_minus_lasso'] = rapm_comparison['RAPM_Ridge'] - rapm_comparison['RAPM_Lasso']
+
+# Top 20 by Lasso
+rapm_lasso_sorted = rapm_comparison.sort_values('RAPM_Lasso', ascending=False).reset_index(drop=True)
+print("Top 20 Players by Lasso RAPM:")
+rapm_lasso_sorted[['player_name', 'RAPM_Lasso', 'RAPM_Ridge', 'minutes_played']].head(20)
+```
+
+```{python}
+#| label: fig-ridge-vs-lasso
+#| fig-cap: "Ridge RAPM vs Lasso RAPM. Most players are along the diagonal, but the Lasso zeroes out many low-information players."
+#| fig-width: 8
+#| fig-height: 6
+
+fig, ax = plt.subplots(figsize=(8, 6))
+ax.scatter(rapm_comparison['RAPM_Ridge'], rapm_comparison['RAPM_Lasso'],
+           alpha=0.4, s=15, c=rapm_comparison['minutes_played'],
+           cmap='viridis', edgecolors='none')
+cbar = plt.colorbar(ax.collections[0], ax=ax, label='Minutes Played')
+
+max_val = max(abs(rapm_comparison['RAPM_Ridge']).max(), abs(rapm_comparison['RAPM_Lasso']).max())
+ax.plot([-max_val, max_val], [-max_val, max_val], 'r--', alpha=0.5, label='y = x')
+ax.set_xlabel('Ridge RAPM', fontsize=12)
+ax.set_ylabel('Lasso RAPM', fontsize=12)
+ax.set_title('Ridge vs Lasso RAPM Coefficients', fontsize=14)
+ax.legend()
+ax.axhline(0, color='gray', alpha=0.3)
+ax.axvline(0, color='gray', alpha=0.3)
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: top-disagreements
+
+# Top 10 where Ridge >> Lasso
+ridge_favored = rapm_comparison.nlargest(10, 'diff_ridge_minus_lasso')
+print("Top 10 Players: Ridge RAPM >> Lasso RAPM")
+print("(Ridge rates these players higher than Lasso)")
+ridge_favored[['player_name', 'RAPM_Ridge', 'RAPM_Lasso', 'diff_ridge_minus_lasso', 'minutes_played']]
+```
+
+```{python}
+#| label: top-disagreements-lasso
+
+# Top 10 where Lasso >> Ridge
+lasso_favored = rapm_comparison.nsmallest(10, 'diff_ridge_minus_lasso')
+print("\nTop 10 Players: Lasso RAPM >> Ridge RAPM")
+print("(Lasso rates these players higher than Ridge)")
+lasso_favored[['player_name', 'RAPM_Ridge', 'RAPM_Lasso', 'diff_ridge_minus_lasso', 'minutes_played']]
+```
+
+```{python}
+#| label: fig-ridge-lasso-top20
+#| fig-cap: "Side-by-side comparison of Top 20 players ranked by Ridge and Lasso RAPM."
+#| fig-width: 10
+#| fig-height: 7
+
+ridge_top20 = rapm_comparison.nlargest(20, 'RAPM_Ridge')
+lasso_top20 = rapm_comparison[rapm_comparison['RAPM_Lasso'] != 0].nlargest(20, 'RAPM_Lasso')
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 7))
+
+# Ridge top 20
+r20 = ridge_top20.iloc[::-1]
+axes[0].barh(range(20), r20['RAPM_Ridge'], color='steelblue', alpha=0.7)
+axes[0].set_yticks(range(20))
+axes[0].set_yticklabels(r20['player_name'], fontsize=8)
+axes[0].set_xlabel('RAPM')
+axes[0].set_title('Top 20: Ridge RAPM')
+
+# Lasso top 20
+l20 = lasso_top20.iloc[::-1]
+axes[1].barh(range(len(l20)), l20['RAPM_Lasso'], color='darkgreen', alpha=0.7)
+axes[1].set_yticks(range(len(l20)))
+axes[1].set_yticklabels(l20['player_name'], fontsize=8)
+axes[1].set_xlabel('RAPM')
+axes[1].set_title('Top 20: Lasso RAPM')
+
+plt.tight_layout()
+plt.show()
+```
+
+**Discussion:**
+
+The Lasso and Ridge approaches produce meaningfully different RAPM rankings, reflecting their fundamentally different philosophies:
+
+1. **Sparsity**: The Lasso sets many player coefficients to exactly zero, effectively saying "there is insufficient evidence that this player differs from average." Ridge never zeroes out coefficients entirely — it shrinks them toward zero but always maintains some non-zero estimate. This makes Lasso more aggressive in its variable selection.
+
+2. **Top 20 differences**: The Lasso tends to produce more extreme non-zero coefficients compared to Ridge for the players it retains, because the $L_1$ penalty does not penalize large coefficients as heavily as $L_2$ once they pass the selection threshold. This means players identified as impactful by Lasso may have larger RAPM magnitudes than their Ridge counterparts.
+
+3. **Disagreements**: The largest disagreements tend to occur for players with moderate playing time — enough that Ridge assigns them a meaningful coefficient, but not enough for Lasso to deem the signal strong enough to survive the sparsity-inducing penalty. Among these disagreement cases, looking at how these players performed in the 2022-23 NBA season can help us assess which model was more predictive:
+
+   - Players where **Ridge rated higher than Lasso** tend to be role players who contributed modestly but consistently. Ridge's more conservative shrinkage may better capture these moderate-impact players.
+   - Players where **Lasso rated higher than Ridge** tend to be players whose impact was concentrated in specific situations (e.g., defensive specialists, high-efficiency bench scorers). Lasso's all-or-nothing approach may better identify players whose impact is real but narrowly focused.
+
+In general, **Ridge regression is preferred for RAPM** because the underlying assumption — that all players have *some* non-zero impact on the game — is more realistic for basketball. The Lasso's assumption that many players have exactly zero impact is too strong. However, Lasso can be useful as a complementary tool for identifying the most clearly impactful players whose signals are strong enough to survive aggressive regularization.

@@ -1,0 +1,899 @@
+---
+title: "Lab 3: Using Classification to Build a Marketing Target Model"
+author: "Umais Siddiqui"
+date: "2026-02-14"
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    fig-pos: "H"
+    geometry: margin=1in
+    fontsize: 11pt
+    linestretch: 1.15
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{python}
+#| label: setup
+#| include: false
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import (classification_report, roc_curve, auc,
+                             precision_score, recall_score, f1_score,
+                             accuracy_score, confusion_matrix)
+from sklearn.calibration import calibration_curve
+import warnings
+warnings.filterwarnings('ignore')
+
+sns.set_style("whitegrid")
+pd.set_option('display.max_columns', 25)
+pd.set_option('display.width', 120)
+
+# Load data
+df = pd.read_csv("DataSets/bank_marketing_dataset.csv")
+df['y_bin'] = (df['y'] == 'yes').astype(int)
+df['time_order'] = df['year'] * 100 + df['month_numeric']
+```
+
+### Overview
+
+In this lab assignment you will be exploring the _Portuguese Bank Marketing Dataset_, which consists of data on the outcomes of marketing calls to bank clients offering them a _term deposit_. A _term deposit_ is a fixed term deposit with the bank that returns the principal plus interest at the end of the pre-defined term period. The objective of this assignment is to apply classification models to make suggestions to the marketing team.
+
+The dataset can be found at the following link: [bank_marketing_dataset.csv](https://github.com/georgehagstrom/DATA622Spring2026/blob/main/website/assignments/labs/labData/bank_marketing_dataset.csv). This dataset is a standard benchmark for classification in the ML community, see the [UCI Machine Learning Repository page](https://archive.ics.uci.edu/dataset/222/bank+marketing), and this introductory paper: [A data driven approach to predict the success of bank telemarketing](https://repositorio.iscte-iul.pt/bitstream/10071/9499/5/dss_v3.pdf). The specific dataset used for this assignment has some subtle differences to those available at the 'UCI Page'. The data is described on the course website at [bank_marketing_dictionary.qmd](labData/bank_marketing_dictionary.qmd).
+
+# Problem 1: What Can Machine Learning Do?
+
+## (a) The Kaggle Notebook Flaw
+
+```{python}
+#| label: fig-duration-flaw
+#| fig-cap: "Duration is a post-hoc variable: it is perfectly correlated with call outcome"
+#| fig-width: 12
+#| fig-height: 4
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+
+# Distribution of duration by outcome
+df[df['y']=='no']['duration'].clip(0, 2000).hist(
+    ax=axes[0], bins=40, alpha=0.6, color='#d9534f', label='No', density=True)
+df[df['y']=='yes']['duration'].clip(0, 2000).hist(
+    ax=axes[0], bins=40, alpha=0.6, color='#5cb85c', label='Yes', density=True)
+axes[0].set_xlabel('Duration (seconds)')
+axes[0].set_ylabel('Density')
+axes[0].set_title('Call Duration by Outcome')
+axes[0].legend()
+
+# Success rate by duration bin
+df['dur_bin'] = pd.cut(df['duration'], bins=[0, 60, 180, 360, 600, 5000],
+                       labels=['<1m', '1-3m', '3-6m', '6-10m', '>10m'])
+dur_rates = df.groupby('dur_bin', observed=True)['y_bin'].agg(['mean', 'count'])
+bars = axes[1].bar(range(len(dur_rates)), dur_rates['mean'], color='steelblue')
+axes[1].set_xticks(range(len(dur_rates)))
+axes[1].set_xticklabels(dur_rates.index, fontsize=9)
+axes[1].set_ylabel('Success Rate')
+axes[1].set_title('Success Rate by Call Duration')
+for bar, count in zip(bars, dur_rates['count']):
+    axes[1].text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.01,
+                f'n={count:,}', ha='center', fontsize=7)
+
+# What happens to AUC with and without duration
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+# Quick comparison: AUC with vs without duration
+X_quick = df[['euribor3m', 'emp.var.rate', 'age', 'campaign']].values
+X_with_dur = df[['euribor3m', 'emp.var.rate', 'age', 'campaign', 'duration']].values
+y_quick = df['y_bin'].values
+
+scaler1, scaler2 = StandardScaler(), StandardScaler()
+lr1 = LogisticRegression(max_iter=500, random_state=42)
+lr2 = LogisticRegression(max_iter=500, random_state=42)
+lr1.fit(scaler1.fit_transform(X_quick), y_quick)
+lr2.fit(scaler2.fit_transform(X_with_dur), y_quick)
+
+from sklearn.metrics import roc_auc_score
+auc_without = roc_auc_score(y_quick, lr1.predict_proba(scaler1.transform(X_quick))[:, 1])
+auc_with = roc_auc_score(y_quick, lr2.predict_proba(scaler2.transform(X_with_dur))[:, 1])
+
+bar_colors = ['#4a90d9', '#e74c3c']
+axes[2].bar(['Without\nduration', 'With\nduration'], [auc_without, auc_with],
+            color=bar_colors, width=0.5)
+axes[2].set_ylabel('AUC (in-sample)')
+axes[2].set_title('AUC Inflation from Duration')
+axes[2].set_ylim(0.5, 1.0)
+for i, v in enumerate([auc_without, auc_with]):
+    axes[2].text(i, v + 0.01, f'{v:.3f}', ha='center', fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+df.drop(columns=['dur_bin'], inplace=True)
+```
+
+The most upvoted Kaggle notebook includes `duration` (the length of the phone call in seconds) as a predictor. This constitutes **information leakage**: `duration` is only observed *after* the call has taken place, so it cannot possibly inform the decision of *whom to call*. As the UCI documentation itself warns, "this attribute highly affects the output target (e.g., if duration=0 then y='no'). Yet, the duration is not known before a call is performed."
+
+The figure above illustrates why this is so insidious. Calls that result in a subscription tend to be longer, not because long calls *cause* subscriptions, but because a client who is genuinely interested will stay on the line to discuss terms, review conditions, and complete the sign-up. Duration is essentially a proxy for the outcome itself, which is why including it inflates AUC from roughly 0.79 to 0.93 in even a minimal feature set. A model built with `duration` appears to perform brilliantly, but it is answering the wrong question: "given that a call lasted 8 minutes, did the client subscribe?" rather than the actionable question: "given what we know about this client *before* picking up the phone, should we call them?"
+
+This is a particularly subtle form of leakage because `duration` is a legitimate column in the dataset and its relationship to `y` is genuinely causal, but the causal direction makes it useless for prediction. The Kaggle comments section reveals that several readers identified this issue, yet the notebook remains the most upvoted, which itself is a cautionary tale about how impressive-looking metrics can overshadow careful thinking about the data-generating process.
+
+
+# Problem 2: EDA and Baseline Model
+
+## (a) EDA and Temporal Patterns
+
+### Dataset Overview
+
+```{python}
+#| label: tbl-dataset-overview
+#| tbl-cap: "Dataset Overview"
+
+overview_data = {
+    'Metric': ['Total Observations', 'Features', 'Target (y=yes)',
+               'Target (y=no)', 'Success Rate'],
+    'Value': [
+        f"{df.shape[0]:,}",
+        df.shape[1],
+        f"{(df['y']=='yes').sum():,}",
+        f"{(df['y']=='no').sum():,}",
+        f"{(df['y']=='yes').mean():.2%}"
+    ]
+}
+print(pd.DataFrame(overview_data).to_string(index=False))
+```
+
+```{python}
+missing = df.isnull().sum()
+if missing.sum() == 0:
+    print("No missing values detected in any column.")
+else:
+    print(missing[missing > 0])
+```
+
+The dataset contains 45,211 observations and 24 features. The target variable `y` indicates whether a client subscribed to a term deposit, with a baseline success rate of approximately 11.7%, a moderate class imbalance that requires thoughtful handling during evaluation but is not extreme enough to necessitate resampling techniques.
+
+### Variable Recoding
+
+Before proceeding with the EDA, two variables warrant recoding. First, `pdays` uses the sentinel value $-1$ to indicate that a client was never previously contacted. Treating $-1$ as a numeric value on the same scale as actual day-counts (which range from 0 to 871) is misleading for any model that assumes a monotonic or linear relationship. I create a binary indicator `contacted_before` to cleanly separate these two populations. Second, the `poutcome` variable's most actionable category is `success` (prior campaign subscription), so I extract a binary `prev_success` flag. These derived variables complement, rather than replace, the originals, and I will use them in both the EDA and the model.
+
+```{python}
+df['contacted_before'] = (df['pdays'] != -1).astype(int)
+df['prev_success'] = (df['poutcome'] == 'success').astype(int)
+```
+
+### Train-Test Split
+
+```{python}
+features_to_drop = ['y', 'y_bin', 'sno', 'duration']
+X = df.drop(columns=[c for c in features_to_drop if c in df.columns])
+y = df['y_bin']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+print(f"Training set: {X_train.shape[0]:,} observations")
+print(f"Testing set:  {X_test.shape[0]:,} observations")
+print(f"Train success rate: {y_train.mean():.4f}")
+print(f"Test success rate:  {y_test.mean():.4f}")
+```
+
+**Stratification rationale.** I stratify by `y` rather than by time. The target is imbalanced (~11.7% positive), and without stratification a random split could produce a test set with a noticeably different class ratio, potentially biasing all downstream evaluation metrics. I deliberately *do not* stratify by time because the assignment's analytical framework requires that each temporal epoch be represented in both training and testing sets, allowing us to examine how model performance degrades across different macroeconomic regimes. A temporal split (train on earlier data, test on later) would be appropriate for simulating real deployment, but would conflate "model degradation over time" with "model performance on a single future regime," making epoch-stratified evaluation impossible.
+
+That said, this choice carries a trade-off worth acknowledging: a random split allows the model to train on observations from all time periods, including the future relative to some test observations. In a strict deployment scenario, this would be a form of look-ahead bias. The epoch-stratified evaluation in part (c) partially addresses this concern by revealing how well the model generalizes to each macroeconomic regime independently.
+
+### Temporal Patterns
+
+```{python}
+#| label: fig-temporal-patterns
+#| fig-cap: "Temporal patterns in campaign success, volume, and macroeconomic context"
+#| fig-width: 14
+#| fig-height: 10
+
+temporal = df.groupby('time_order').agg(
+    n=('y', 'size'),
+    success_rate=('y_bin', 'mean'),
+    euribor3m=('euribor3m', 'first'),
+    emp_var_rate=('emp.var.rate', 'first'),
+    cons_conf=('cons.conf.idx', 'first')
+).reset_index()
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+# Success rate over time
+colors_sr = plt.cm.RdYlGn(temporal['success_rate'] / temporal['success_rate'].max())
+axes[0, 0].bar(range(len(temporal)), temporal['success_rate'], color=colors_sr)
+axes[0, 0].set_xticks(range(len(temporal)))
+axes[0, 0].set_xticklabels(temporal['time_order'].astype(str), rotation=45, ha='right', fontsize=7)
+axes[0, 0].set_ylabel('Success Rate')
+axes[0, 0].set_title('Campaign Success Rate Over Time')
+axes[0, 0].axhline(y=df['y_bin'].mean(), color='red', linestyle='--', alpha=0.7, label='Overall mean')
+axes[0, 0].legend(fontsize=8)
+
+# Volume over time
+axes[0, 1].bar(range(len(temporal)), temporal['n'], color='coral', alpha=0.8)
+axes[0, 1].set_xticks(range(len(temporal)))
+axes[0, 1].set_xticklabels(temporal['time_order'].astype(str), rotation=45, ha='right', fontsize=7)
+axes[0, 1].set_ylabel('Number of Calls')
+axes[0, 1].set_title('Campaign Volume Over Time')
+
+# Euribor3m and emp.var.rate over time (dual axis)
+ax_eur = axes[1, 0]
+ax_emp = ax_eur.twinx()
+l1, = ax_eur.plot(range(len(temporal)), temporal['euribor3m'], 'o-', color='darkgreen',
+                  linewidth=2, label='Euribor 3m')
+l2, = ax_emp.plot(range(len(temporal)), temporal['emp_var_rate'], 's--', color='darkred',
+                  linewidth=2, label='Emp. Var. Rate')
+ax_eur.set_xticks(range(len(temporal)))
+ax_eur.set_xticklabels(temporal['time_order'].astype(str), rotation=45, ha='right', fontsize=7)
+ax_eur.set_ylabel('Euribor 3m (%)', color='darkgreen')
+ax_emp.set_ylabel('Emp. Var. Rate', color='darkred')
+ax_eur.set_title('Macroeconomic Indicators Over Time')
+ax_eur.legend(handles=[l1, l2], loc='center right', fontsize=8)
+
+# Success rate vs euribor - the key relationship
+sc = axes[1, 1].scatter(temporal['euribor3m'], temporal['success_rate'],
+                        s=temporal['n']/8, alpha=0.7, c=temporal['emp_var_rate'],
+                        cmap='RdYlGn_r', edgecolors='black', linewidth=0.5)
+axes[1, 1].set_xlabel('Euribor 3-month rate (%)')
+axes[1, 1].set_ylabel('Success Rate')
+axes[1, 1].set_title('Success Rate vs Euribor3m\n(size=volume, color=emp.var.rate)')
+plt.colorbar(sc, ax=axes[1, 1], label='Emp. Var. Rate', shrink=0.8)
+
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: tbl-success-by-year
+#| tbl-cap: "Campaign outcomes and macroeconomic context by year"
+
+yearly = df.groupby('year').agg(
+    calls=('y', 'size'),
+    successes=('y_bin', 'sum'),
+    success_rate=('y_bin', 'mean'),
+    mean_euribor=('euribor3m', 'mean'),
+    mean_emp_var=('emp.var.rate', 'mean'),
+    mean_cons_conf=('cons.conf.idx', 'mean')
+).round(4)
+print(yearly.to_string())
+```
+
+### Key Predictor Relationships
+
+```{python}
+#| label: fig-predictor-relationships
+#| fig-cap: "Key predictor relationships with subscription outcome"
+#| fig-width: 16
+#| fig-height: 10
+
+fig, axes = plt.subplots(2, 3, figsize=(16, 10))
+
+# Contact method
+ct = pd.crosstab(df['contact'], df['y'], normalize='index')
+ct.plot(kind='bar', ax=axes[0, 0], color=['#d9534f', '#5cb85c'])
+axes[0, 0].set_title('Success Rate by Contact Method')
+axes[0, 0].set_ylabel('Proportion')
+axes[0, 0].tick_params(axis='x', rotation=0)
+
+# Previous outcome - the strongest individual predictor
+ct2 = pd.crosstab(df['poutcome'], df['y'], normalize='index')
+ct2.plot(kind='bar', ax=axes[0, 1], color=['#d9534f', '#5cb85c'])
+axes[0, 1].set_title('Success Rate by Previous Outcome')
+axes[0, 1].set_ylabel('Proportion')
+axes[0, 1].tick_params(axis='x', rotation=0)
+
+# Housing loan
+ct3 = pd.crosstab(df['housing'], df['y'], normalize='index')
+ct3.plot(kind='bar', ax=axes[0, 2], color=['#d9534f', '#5cb85c'])
+axes[0, 2].set_title('Success Rate by Housing Loan Status')
+axes[0, 2].set_ylabel('Proportion')
+axes[0, 2].tick_params(axis='x', rotation=0)
+
+# Job - sorted by success rate to reveal ordering
+job_rates = df.groupby('job')['y_bin'].agg(['mean', 'count']).sort_values('mean', ascending=False)
+bar_colors = ['#2ecc71' if r > df['y_bin'].mean() else '#95a5a6' for r in job_rates['mean']]
+axes[1, 0].bar(range(len(job_rates)), job_rates['mean'], color=bar_colors)
+axes[1, 0].set_xticks(range(len(job_rates)))
+axes[1, 0].set_xticklabels(job_rates.index, rotation=45, ha='right', fontsize=8)
+axes[1, 0].axhline(y=df['y_bin'].mean(), color='red', linestyle='--', alpha=0.5, label='Overall mean')
+axes[1, 0].set_ylabel('Success Rate')
+axes[1, 0].set_title('Success Rate by Job (green = above average)')
+axes[1, 0].legend(fontsize=8)
+
+# Age - bimodal pattern
+df[df['y']=='no']['age'].hist(ax=axes[1, 1], bins=30, alpha=0.5, color='#d9534f',
+                               label='No', density=True)
+df[df['y']=='yes']['age'].hist(ax=axes[1, 1], bins=30, alpha=0.5, color='#5cb85c',
+                                label='Yes', density=True)
+axes[1, 1].set_title('Age Distribution by Outcome')
+axes[1, 1].set_xlabel('Age')
+axes[1, 1].legend()
+
+# pdays distribution - the -1 sentinel value issue
+pdays_contacted = df[df['pdays'] != -1]
+axes[1, 2].hist(pdays_contacted['pdays'], bins=40, color='steelblue', alpha=0.7, edgecolor='black')
+axes[1, 2].set_xlabel('Days Since Last Contact (pdays)')
+axes[1, 2].set_ylabel('Count')
+axes[1, 2].set_title(f'pdays Distribution (contacted clients only)\n'
+                     f'{len(pdays_contacted):,} of {len(df):,} were previously contacted')
+
+plt.tight_layout()
+plt.show()
+```
+
+### Composition of the Target Population Over Time
+
+```{python}
+#| label: fig-composition-shift
+#| fig-cap: "How the composition of who the marketing team called shifted over time"
+#| fig-width: 14
+#| fig-height: 10
+
+df['is_high_success_job'] = df['job'].isin(['retired', 'student']).astype(int)
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+# Contact method distribution over time
+ct_time = pd.crosstab(df['time_order'], df['contact'], normalize='index')
+ct_time.plot(kind='bar', stacked=True, ax=axes[0, 0], width=0.8)
+axes[0, 0].set_title('Contact Method Distribution Over Time')
+axes[0, 0].set_ylabel('Proportion')
+axes[0, 0].tick_params(axis='x', rotation=45)
+axes[0, 0].legend(loc='upper right', fontsize=8)
+
+# Retired + student share
+job_share = df.groupby('time_order')['is_high_success_job'].mean()
+axes[0, 1].plot(range(len(job_share)), job_share.values, 'o-', color='purple', linewidth=2)
+axes[0, 1].set_xticks(range(len(job_share)))
+axes[0, 1].set_xticklabels(job_share.index.astype(str), rotation=45, ha='right', fontsize=7)
+axes[0, 1].set_ylabel('Share of Retired + Student')
+axes[0, 1].set_title('Share of High-Success Demographics Over Time')
+axes[0, 1].fill_between(range(len(job_share)), job_share.values, alpha=0.2, color='purple')
+
+# Mean campaign contacts per person over time
+camp_time = df.groupby('time_order')['campaign'].mean()
+axes[1, 0].plot(range(len(camp_time)), camp_time.values, 'o-', color='darkred', linewidth=2)
+axes[1, 0].set_xticks(range(len(camp_time)))
+axes[1, 0].set_xticklabels(camp_time.index.astype(str), rotation=45, ha='right', fontsize=7)
+axes[1, 0].set_ylabel('Mean Contacts Per Client')
+axes[1, 0].set_title('Campaign Intensity Over Time')
+
+# Previously contacted share over time
+prev_share = df.groupby('time_order')['contacted_before'].mean()
+axes[1, 1].plot(range(len(prev_share)), prev_share.values, 'o-', color='teal', linewidth=2)
+axes[1, 1].set_xticks(range(len(prev_share)))
+axes[1, 1].set_xticklabels(prev_share.index.astype(str), rotation=45, ha='right', fontsize=7)
+axes[1, 1].set_ylabel('Share Previously Contacted')
+axes[1, 1].set_title('Re-targeting Rate Over Time')
+axes[1, 1].fill_between(range(len(prev_share)), prev_share.values, alpha=0.2, color='teal')
+
+plt.tight_layout()
+plt.show()
+```
+
+### Summary of Key EDA Findings
+
+The most consequential pattern in this dataset is the **dramatic temporal variation** in campaign success. The subscription rate rises from roughly 5% in 2008 to about 17% in 2009 and exceeds 50% in 2010. This variation does not appear to reflect improvements in the marketing team's skill alone. The timing aligns closely with the trajectory of the **2008-2009 European financial crisis**, and the macroeconomic indicators in the dataset provide a plausible causal mechanism.
+
+**The Euribor 3-month rate** (the rate at which Eurozone banks lend to each other) declined from approximately 5% in mid-2008 to below 1% by late 2009, driven by the ECB's aggressive monetary easing. The strong negative correlation between `euribor3m` and subscription success ($r \approx -0.4$ at the month level) suggests that low interbank rates made term deposits relatively more attractive. One interpretation is that as market rates collapsed, the bank's term deposit offerings (which typically adjust more slowly) suddenly represented competitive returns compared to near-zero savings rates. Clients who would normally seek higher yields elsewhere found fewer options, making a guaranteed fixed return more appealing.
+
+**The employment variation rate** (`emp.var.rate`) tracks a similar pattern: as it turned sharply negative (falling from +1.4 to $-3.4$), reflecting rising unemployment, success rates increased. This correlation may seem counterintuitive: why would people lock up money in term deposits when they might lose their jobs? A few non-exclusive explanations deserve consideration: (1) economic anxiety may drive precautionary saving in perceived "safe" instruments, (2) the employment indicator reflects aggregate labor-market conditions rather than the financial situation of the specific clients being called, and (3) the marketing team may have shifted its target population toward financially secure segments (retirees, students with family wealth) precisely during the downturn, confounding the aggregate relationship.
+
+Beyond macroeconomics, the **composition of the target population changed markedly** over time. The share of retired and student clients rose from ~5% in 2008 to ~24% in 2010. Since these demographics have the highest baseline subscription rates (students: ~29%, retirees: ~25%), this compositional shift alone would increase the observed success rate even if nothing else changed. The contact method also evolved: May-June 2008 used exclusively "unknown" contact, while later periods shifted to cellular, a method associated with higher success rates, though we should be cautious about interpreting this causally since the shift is confounded with time.
+
+The strongest individual-level predictor is `poutcome`: clients whose previous campaign contact resulted in a subscription have a ~65% success rate, roughly 6× the population average. This is consistent with a general principle in direct marketing (prior buyers are the most likely future buyers) and represents the most immediately actionable signal in the dataset.
+
+## (b) Baseline Model and Data Drift
+
+### Why Temporal Variation Causes Metric Mismatch
+
+If we train and evaluate a model using a single random split of the full dataset, the resulting performance metrics are a *weighted average* across fundamentally different operating regimes. In 2008, only about 5% of calls succeeded under adverse macroeconomic conditions; by 2010, over 50% succeeded in a favorable environment. A model reporting an overall AUC of, say, 0.80 may be performing well in the easy regime (where the macroeconomic signal does most of the work) while failing to discriminate in the difficult regime (where individual-level features must carry the predictive burden).
+
+This matters practically because the marketing team experiences one regime at a time. A team deploying this model in 2008-like conditions would find that the pooled AUC drastically overstates how useful the model actually is for their immediate decisions. Conversely, a team in 2010-like conditions might underappreciate its value. This is a manifestation of **covariate shift**: the distribution of the input features (particularly the macroeconomic indicators) changes across time, and since these features strongly influence both the model's predictions and the true outcome, aggregated metrics become misleading. The standard approach (rolling-window evaluation) would address this by mimicking real-time deployment, but the uneven temporal distribution of observations in this dataset (28,000+ calls in 2008, only 2,600 in 2010) makes rolling windows impractical. I therefore adopt the assignment's suggested approach: dividing the test set into macroeconomic **epochs** and evaluating separately within each.
+
+### Defining Epochs
+
+```{python}
+#| label: tbl-epoch-definition
+#| tbl-cap: "Epoch definitions based on the Euribor 3-month rate"
+
+# Three epochs based on euribor3m, reflecting distinct macroeconomic regimes:
+#   High (>3.5%):   Pre-crisis / early crisis - euribor still elevated, hostile environment
+#   Medium (1.5-3.5%): Crisis transition - rates falling rapidly, conditions improving
+#   Low (<1.5%):    Post-crisis - rates at historic lows, favorable for deposits
+
+epoch_bins = [0, 1.5, 3.5, 5.5]
+epoch_labels = ['Low (<1.5%)', 'Medium (1.5-3.5%)', 'High (>3.5%)']
+test_epochs = pd.cut(X_test['euribor3m'], bins=epoch_bins, labels=epoch_labels)
+
+epoch_summary = []
+for ep in epoch_labels:
+    mask = test_epochs == ep
+    epoch_summary.append({
+        'Epoch': ep,
+        'N (test)': mask.sum(),
+        'Success Rate': f"{y_test[mask].mean():.4f}",
+        'Euribor Range': f"{X_test.loc[mask, 'euribor3m'].min():.2f} - {X_test.loc[mask, 'euribor3m'].max():.2f}",
+        'Approx. Period': ['Late 2009 - 2010', 'Mid 2009', 'May 2008 - Early 2009'][epoch_labels.index(ep)]
+    })
+
+print(pd.DataFrame(epoch_summary).to_string(index=False))
+```
+
+The epoch boundaries are chosen to align with distinct phases of the ECB's monetary response: the **High** epoch captures the period before aggressive rate cuts, the **Medium** epoch spans the transition as rates fell through the 1.5-3.5% range, and the **Low** epoch covers the extended period of near-zero rates. These boundaries are admittedly somewhat arbitrary (a different analyst might choose slightly different cutoffs), but the key insight is qualitative: the three regimes produce dramatically different baseline success rates, and any useful evaluation must account for this.
+
+## (c) Baseline Logistic Regression
+
+### Feature Selection
+
+```{python}
+# Features chosen based on EDA findings.
+# EXCLUDED: duration (post-hoc), month_numeric/day/year (temporal), sno (ID)
+# These exclusions follow the assignment's guidance: no temporal predictors,
+# and no features unavailable at decision time.
+
+cat_features = ['job', 'marital', 'education', 'default', 'housing',
+                'loan', 'contact', 'poutcome']
+num_features = ['age', 'balance', 'campaign', 'pdays', 'previous',
+                'euribor3m', 'emp.var.rate', 'nr.employed',
+                'cons.price.idx', 'cons.conf.idx']
+features_model = num_features + cat_features
+
+print("Model features:")
+print(f"  Numeric ({len(num_features)}): {', '.join(num_features)}")
+print(f"  Categorical ({len(cat_features)}): {', '.join(cat_features)}")
+print(f"\nExcluded: duration, month_numeric, day, year, sno")
+print("  - duration: only known after the call (information leakage)")
+print("  - month_numeric, day, year: temporal predictors per assignment instructions")
+print("  - sno: row identifier with no predictive content")
+```
+
+A note on macroeconomic features: including `euribor3m`, `emp.var.rate`, and the other macro indicators is a deliberate choice. These variables are known *before* any call is made and reflect the economic environment in which the campaign operates. They are not "temporal" in the sense of calendar variables; they capture the state of the world, not the date on the calendar. A model deployed in practice would use current macroeconomic readings as inputs, so including them here mirrors realistic usage.
+
+### Pipeline Construction and Training
+
+```{python}
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), num_features),
+        ('cat', OneHotEncoder(drop='first', handle_unknown='ignore',
+                              sparse_output=False), cat_features)
+    ]
+)
+
+baseline_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', LogisticRegression(max_iter=1000, random_state=42))
+])
+
+baseline_pipeline.fit(X_train[features_model], y_train)
+print("Baseline logistic regression fitted successfully.")
+print(f"  Solver: lbfgs | Regularization: C=1.0 (default L2)")
+print(f"  Training observations: {X_train.shape[0]:,}")
+```
+
+### Performance by Epoch
+
+```{python}
+#| label: tbl-epoch-performance
+#| tbl-cap: "Baseline model performance and campaign context by epoch"
+
+results = []
+for epoch_name in epoch_labels:
+    mask = test_epochs == epoch_name
+    X_ep = X_test[features_model][mask]
+    y_ep = y_test[mask]
+    y_pred = baseline_pipeline.predict(X_ep)
+    y_prob = baseline_pipeline.predict_proba(X_ep)[:, 1]
+
+    fpr, tpr, _ = roc_curve(y_ep, y_prob)
+    roc_auc = auc(fpr, tpr)
+    error_rate = 1 - accuracy_score(y_ep, y_pred)
+
+    results.append({
+        'Epoch': epoch_name,
+        'N': mask.sum(),
+        'Campaign Success Rate': f"{y_ep.mean():.4f}",
+        'Model Error Rate': f"{error_rate:.4f}",
+        'AUC': f"{roc_auc:.4f}",
+        'Precision': f"{precision_score(y_ep, y_pred, zero_division=0):.4f}",
+        'Recall': f"{recall_score(y_ep, y_pred, zero_division=0):.4f}",
+        'F1': f"{f1_score(y_ep, y_pred, zero_division=0):.4f}"
+    })
+
+# Overall
+y_pred_all = baseline_pipeline.predict(X_test[features_model])
+y_prob_all = baseline_pipeline.predict_proba(X_test[features_model])[:, 1]
+fpr_all, tpr_all, _ = roc_curve(y_test, y_prob_all)
+roc_auc_all = auc(fpr_all, tpr_all)
+
+results.append({
+    'Epoch': 'Overall',
+    'N': len(y_test),
+    'Campaign Success Rate': f"{y_test.mean():.4f}",
+    'Model Error Rate': f"{1 - accuracy_score(y_test, y_pred_all):.4f}",
+    'AUC': f"{roc_auc_all:.4f}",
+    'Precision': f"{precision_score(y_test, y_pred_all):.4f}",
+    'Recall': f"{recall_score(y_test, y_pred_all):.4f}",
+    'F1': f"{f1_score(y_test, y_pred_all):.4f}"
+})
+
+results_df = pd.DataFrame(results)
+print(results_df.to_string(index=False))
+```
+
+### ROC Curves by Epoch
+
+```{python}
+#| label: fig-roc-by-epoch
+#| fig-cap: "ROC curves by epoch for the baseline logistic regression"
+#| fig-width: 18
+#| fig-height: 5
+
+fig, axes = plt.subplots(1, 4, figsize=(18, 5))
+
+for i, epoch_name in enumerate(epoch_labels):
+    mask = test_epochs == epoch_name
+    X_ep = X_test[features_model][mask]
+    y_ep = y_test[mask]
+    y_prob = baseline_pipeline.predict_proba(X_ep)[:, 1]
+
+    fpr, tpr, _ = roc_curve(y_ep, y_prob)
+    roc_auc = auc(fpr, tpr)
+
+    axes[i].plot(fpr, tpr, 'b-', linewidth=2, label=f'AUC = {roc_auc:.3f}')
+    axes[i].plot([0, 1], [0, 1], 'k--', alpha=0.4)
+    axes[i].fill_between(fpr, tpr, alpha=0.1, color='blue')
+    axes[i].set_xlabel('False Positive Rate')
+    axes[i].set_ylabel('True Positive Rate')
+    axes[i].set_title(f'{epoch_name}\n(n={mask.sum():,}, success={y_ep.mean():.1%})')
+    axes[i].legend(loc='lower right')
+
+# Overall
+axes[3].plot(fpr_all, tpr_all, 'b-', linewidth=2, label=f'AUC = {roc_auc_all:.3f}')
+axes[3].plot([0, 1], [0, 1], 'k--', alpha=0.4)
+axes[3].fill_between(fpr_all, tpr_all, alpha=0.1, color='blue')
+axes[3].set_xlabel('False Positive Rate')
+axes[3].set_ylabel('True Positive Rate')
+axes[3].set_title(f'Overall Test Set\n(n={len(y_test):,}, success={y_test.mean():.1%})')
+axes[3].legend(loc='lower right')
+
+plt.tight_layout()
+plt.show()
+```
+
+### Probability Calibration Curves by Epoch
+
+```{python}
+#| label: fig-calibration-by-epoch
+#| fig-cap: "Calibration curves by epoch: how well do predicted probabilities match observed outcomes?"
+#| fig-width: 18
+#| fig-height: 5
+
+fig, axes = plt.subplots(1, 4, figsize=(18, 5))
+
+for i, epoch_name in enumerate(epoch_labels):
+    mask = test_epochs == epoch_name
+    X_ep = X_test[features_model][mask]
+    y_ep = y_test[mask]
+    y_prob = baseline_pipeline.predict_proba(X_ep)[:, 1]
+
+    # Calibration curve
+    fraction_pos, mean_pred = calibration_curve(y_ep, y_prob, n_bins=10, strategy='uniform')
+
+    axes[i].plot(mean_pred, fraction_pos, 's-', color='steelblue', linewidth=2,
+                 markersize=6, label='Model')
+    axes[i].plot([0, 1], [0, 1], 'k--', alpha=0.4, label='Perfect calibration')
+    axes[i].fill_between(mean_pred, fraction_pos,
+                         [m for m in mean_pred], alpha=0.15, color='steelblue')
+    axes[i].set_xlabel('Mean Predicted Probability')
+    axes[i].set_ylabel('Fraction of Positives')
+    axes[i].set_title(f'{epoch_name}\n(base rate = {y_ep.mean():.1%})')
+    axes[i].legend(loc='upper left', fontsize=8)
+    axes[i].set_xlim(-0.02, 1.02)
+    axes[i].set_ylim(-0.02, 1.02)
+
+# Overall
+fraction_pos_all, mean_pred_all = calibration_curve(y_test, y_prob_all, n_bins=10,
+                                                     strategy='uniform')
+axes[3].plot(mean_pred_all, fraction_pos_all, 's-', color='steelblue', linewidth=2,
+             markersize=6, label='Model')
+axes[3].plot([0, 1], [0, 1], 'k--', alpha=0.4, label='Perfect calibration')
+axes[3].fill_between(mean_pred_all, fraction_pos_all,
+                     [m for m in mean_pred_all], alpha=0.15, color='steelblue')
+axes[3].set_xlabel('Mean Predicted Probability')
+axes[3].set_ylabel('Fraction of Positives')
+axes[3].set_title(f'Overall Test Set\n(base rate = {y_test.mean():.1%})')
+axes[3].legend(loc='upper left', fontsize=8)
+axes[3].set_xlim(-0.02, 1.02)
+axes[3].set_ylim(-0.02, 1.02)
+
+plt.tight_layout()
+plt.show()
+```
+
+### Interpretation of ROC and Calibration Results
+
+The epoch-stratified evaluation reveals a stark reality: **the model's usefulness is regime-dependent.**
+
+**Discriminative ability (ROC curves).** In the **Low euribor epoch** (favorable conditions, ~26% base rate), the model achieves a respectable AUC of approximately 0.79, indicating genuine ability to rank clients by subscription likelihood. In the **Medium epoch** (~11% base rate), the AUC drops to roughly 0.68, still above random, but with substantially less discriminative power. In the **High epoch** (hostile conditions, ~5% base rate), the AUC is weakest at approximately 0.60. This pattern is consistent with a model that leans heavily on the macroeconomic features: in the Low epoch, the macro signal separates easy wins from marginal cases, but within the High epoch (where macro conditions are uniformly bad for all observations), the model must rely on weaker individual-level features.
+
+The **overall AUC of ~0.80** appears respectable but is misleading. It is inflated by the model's ability to separate Low-epoch observations (which cluster at high predicted probabilities) from High-epoch ones (which cluster low). This is not discrimination within a realistic operating scenario; it is the model detecting which regime an observation belongs to, which the marketing team already knows from looking at today's interest rate.
+
+**Calibration (reliability curves).** The calibration curves reveal an equally important and complementary insight. On the overall test set, the model appears reasonably well-calibrated, and its predicted probabilities roughly match observed success frequencies. However, the epoch-specific calibration curves tell a different story. In the **Low epoch**, the model likely *underestimates* success probabilities: when it predicts a 20% chance, the actual success rate may be closer to 30%. Conversely, in the **High epoch**, the model may *overestimate*, predicting 10% when the true rate is closer to 5%. This is a direct consequence of training on a mixture of regimes: the model's probability estimates reflect the average training distribution, not the current operating environment.
+
+This miscalibration has practical consequences. If the marketing team uses predicted probabilities to set a threshold (e.g., "call everyone with >15% predicted probability"), the same threshold will be too conservative in favorable conditions and too aggressive in adverse ones. A team using the model in 2008-like conditions would waste resources calling clients whose true probability is much lower than the model claims. Recalibrating the model separately for each regime (or retraining periodically) would mitigate this issue, but requires the team to recognize which regime they are operating in.
+
+## (d) Lift Curves and Hit Rates
+
+```{python}
+def compute_lift_curve(y_true, y_prob, n_points=100):
+    """
+    Compute lift at each targeting percentile.
+    Lift = (success rate in top x%) / (overall success rate).
+    When targeting 100%, lift = 1 (equivalent to random dialing).
+    """
+    n = len(y_true)
+    base_rate = y_true.mean()
+    idx = np.argsort(-y_prob)
+    y_sorted = y_true.iloc[idx].values
+    percentiles = np.linspace(0.01, 1.0, n_points)
+    lifts = []
+    hit_rates = []
+    for pct in percentiles:
+        top_n = max(1, int(n * pct))
+        hit_rate = y_sorted[:top_n].mean()
+        lift = hit_rate / base_rate if base_rate > 0 else 0
+        lifts.append(lift)
+        hit_rates.append(hit_rate)
+    return percentiles, lifts, hit_rates
+
+
+def calc_lift_hit(y_true, y_prob, pct):
+    """Calculate lift and hit rate at a specific targeting percentile."""
+    n = len(y_true)
+    top_n = max(1, int(n * pct))
+    idx = np.argsort(-y_prob)[:top_n]
+    hit_rate = y_true.iloc[idx].mean()
+    base_rate = y_true.mean()
+    lift = hit_rate / base_rate if base_rate > 0 else 0
+    return lift, hit_rate
+```
+
+```{python}
+#| label: fig-lift-curves
+#| fig-cap: "Lift curves by epoch: how much better than random targeting can the model achieve?"
+#| fig-width: 18
+#| fig-height: 5
+
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+lift_results = []
+
+for i, epoch_name in enumerate(epoch_labels):
+    mask = test_epochs == epoch_name
+    X_ep = X_test[features_model][mask]
+    y_ep = y_test[mask].reset_index(drop=True)
+    y_prob = baseline_pipeline.predict_proba(X_ep)[:, 1]
+
+    pcts, lifts, hit_rates = compute_lift_curve(y_ep, y_prob)
+
+    axes[i].plot(pcts * 100, lifts, '-', color='steelblue', linewidth=2.5)
+    axes[i].axhline(y=1, color='gray', linestyle='--', alpha=0.5, label='Random (lift=1)')
+    axes[i].set_xlabel('% of Population Targeted')
+    axes[i].set_ylabel('Lift')
+    axes[i].set_title(f'{epoch_name}\n(base rate = {y_ep.mean():.1%})')
+
+    # Mark specific targeting levels
+    lift10, hit10 = calc_lift_hit(y_ep, y_prob, 0.10)
+    lift50, hit50 = calc_lift_hit(y_ep, y_prob, 0.50)
+
+    axes[i].plot(10, lift10, 'ro', markersize=10, zorder=5,
+                 label=f'Top 10%: lift={lift10:.2f}, hit={hit10:.1%}')
+    axes[i].plot(50, lift50, 'gs', markersize=10, zorder=5,
+                 label=f'Top 50%: lift={lift50:.2f}, hit={hit50:.1%}')
+    axes[i].legend(fontsize=8, loc='upper right')
+    axes[i].set_xlim(0, 100)
+
+    lift_results.append({
+        'Epoch': epoch_name,
+        'Base Rate': f"{y_ep.mean():.4f}",
+        'Lift @ 10%': f"{lift10:.2f}",
+        'Hit Rate @ 10%': f"{hit10:.1%}",
+        'Lift @ 50%': f"{lift50:.2f}",
+        'Hit Rate @ 50%': f"{hit50:.1%}"
+    })
+
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: tbl-lift-summary
+#| tbl-cap: "Lift and hit rate summary at key targeting thresholds"
+
+lift_df = pd.DataFrame(lift_results)
+print(lift_df.to_string(index=False))
+```
+
+### Interpretation of Lift Curves
+
+The lift curves translate model performance into the language of business decisions: if the marketing team calls only the top-ranked $x\%$ of clients, how many more subscriptions will they achieve per call compared to random dialing?
+
+In the **Low euribor epoch**, the model achieves its strongest lift, approximately 2.8× at the 10% targeting level, with a hit rate around 73%. This means that by calling only the top-ranked tenth of the population, the team can expect roughly 3 out of 4 calls to result in a subscription. Even at the 50% level, the lift remains above 1.5× with a hit rate around 43%. The practical implication is compelling: the team can achieve more conversions with half the calls, or the same number of conversions with a fraction of the budget.
+
+In the **Medium epoch**, the model still provides meaningful lift (~2.6× at 10%), but the hit rate is lower (~29%) simply because the underlying base rate is much lower. The model is still selecting the right people, but fewer people are willing buyers in this regime. The ROI of targeted calling remains positive (2.6× random is still a substantial improvement), but the absolute returns per call are lower.
+
+In the **High epoch** (hostile conditions), lift at 10% drops to approximately 1.6× with a hit rate of only ~8%. The model is barely improving on random selection. This is not surprising given the weak AUC in this regime: when the macroeconomic environment is uniformly hostile, there are few easy wins to identify, and the individual-level features provide limited discrimination.
+
+An important observation: **lift is considerably more stable across epochs than raw metrics like accuracy or F1.** Even in the difficult High epoch, the model provides some targeting value (lift > 1). This suggests that while the model's absolute probability estimates are unreliable across regimes (as the calibration curves showed), its *ranking* of clients, which is what lift measures, retains modest utility. For a marketing team that needs to prioritize a fixed call budget, ranking accuracy matters more than probability accuracy.
+
+
+# Extra Credit: How Has the Marketing Team Already Been Optimizing?
+
+```{python}
+#| label: fig-team-optimization
+#| fig-cap: "Four lines of evidence suggesting the marketing team adapted its strategy over time"
+#| fig-width: 14
+#| fig-height: 10
+
+df_full = pd.read_csv("DataSets/bank_marketing_dataset.csv")
+df_full['y_bin'] = (df_full['y'] == 'yes').astype(int)
+df_full['time_order'] = df_full['year'] * 100 + df_full['month_numeric']
+df_full['is_retired_or_student'] = df_full['job'].isin(['retired', 'student']).astype(int)
+df_full['contacted_before'] = (df_full['pdays'] != -1).astype(int)
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+temporal_ec = df_full.groupby('time_order').agg(
+    n=('y', 'size'),
+    success_rate=('y_bin', 'mean'),
+    mean_campaign=('campaign', 'mean'),
+    retired_student_share=('is_retired_or_student', 'mean'),
+    cellular_share=('contact', lambda x: (x == 'cellular').mean()),
+    recontact_share=('contacted_before', 'mean')
+).reset_index()
+
+# Panel 1: Campaign intensity
+axes[0, 0].plot(range(len(temporal_ec)), temporal_ec['mean_campaign'], 'o-',
+                color='darkred', linewidth=2, markersize=5)
+axes[0, 0].set_xticks(range(len(temporal_ec)))
+axes[0, 0].set_xticklabels(temporal_ec['time_order'].astype(str), rotation=45,
+                            ha='right', fontsize=7)
+axes[0, 0].set_ylabel('Mean Contacts Per Client')
+axes[0, 0].set_title('1. Campaign Intensity: Fewer Calls Per Person')
+axes[0, 0].fill_between(range(len(temporal_ec)), temporal_ec['mean_campaign'],
+                         alpha=0.15, color='darkred')
+
+# Panel 2: Demographic shift
+axes[0, 1].plot(range(len(temporal_ec)), temporal_ec['retired_student_share'], 'o-',
+                color='purple', linewidth=2, markersize=5)
+axes[0, 1].set_xticks(range(len(temporal_ec)))
+axes[0, 1].set_xticklabels(temporal_ec['time_order'].astype(str), rotation=45,
+                            ha='right', fontsize=7)
+axes[0, 1].set_ylabel('Share of Retired + Students')
+axes[0, 1].set_title('2. Demographic Shift: Targeting High-Success Segments')
+axes[0, 1].fill_between(range(len(temporal_ec)), temporal_ec['retired_student_share'],
+                         alpha=0.15, color='purple')
+
+# Panel 3: Volume vs success rate (the exploitation signature)
+ax_vol = axes[1, 0]
+ax_sr = ax_vol.twinx()
+bars = ax_vol.bar(range(len(temporal_ec)), temporal_ec['n'], alpha=0.5,
+                  color='steelblue', label='Volume')
+l_sr, = ax_sr.plot(range(len(temporal_ec)), temporal_ec['success_rate'], 'o-',
+                   color='darkgreen', linewidth=2, label='Success Rate')
+ax_vol.set_xticks(range(len(temporal_ec)))
+ax_vol.set_xticklabels(temporal_ec['time_order'].astype(str), rotation=45,
+                        ha='right', fontsize=7)
+ax_vol.set_ylabel('Number of Calls', color='steelblue')
+ax_sr.set_ylabel('Success Rate', color='darkgreen')
+axes[1, 0].set_title('3. Volume ↓ While Success Rate ↑')
+ax_vol.legend(handles=[bars.patches[0], l_sr], loc='center right', fontsize=8)
+
+# Panel 4: Re-targeting rate
+axes[1, 1].plot(range(len(temporal_ec)), temporal_ec['recontact_share'], 'o-',
+                color='teal', linewidth=2, markersize=5)
+axes[1, 1].set_xticks(range(len(temporal_ec)))
+axes[1, 1].set_xticklabels(temporal_ec['time_order'].astype(str), rotation=45,
+                            ha='right', fontsize=7)
+axes[1, 1].set_ylabel('Share Previously Contacted')
+axes[1, 1].set_title('4. Re-targeting: Increasing Use of Prior Contact History')
+axes[1, 1].fill_between(range(len(temporal_ec)), temporal_ec['recontact_share'],
+                         alpha=0.15, color='teal')
+
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: fig-selectivity-evidence
+#| fig-cap: "Deeper evidence: how the team narrowed its target population"
+#| fig-width: 14
+#| fig-height: 5
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+
+# Panel 1: Success rate of re-contacted vs first-time by year
+for yr in sorted(df_full['year'].unique()):
+    mask_yr = df_full['year'] == yr
+    first_time = df_full[mask_yr & (df_full['contacted_before'] == 0)]['y_bin'].mean()
+    recontacted = df_full[mask_yr & (df_full['contacted_before'] == 1)]['y_bin'].mean()
+    n_first = (mask_yr & (df_full['contacted_before'] == 0)).sum()
+    n_recon = (mask_yr & (df_full['contacted_before'] == 1)).sum()
+    axes[0].scatter(yr, first_time, color='steelblue', s=n_first/20, alpha=0.7,
+                    edgecolors='black', linewidth=0.5)
+    axes[0].scatter(yr, recontacted, color='coral', s=max(20, n_recon/20), alpha=0.7,
+                    edgecolors='black', linewidth=0.5, marker='D')
+axes[0].set_xlabel('Year')
+axes[0].set_ylabel('Success Rate')
+axes[0].set_title('First-Time (blue) vs Re-Contacted (red)\n(size = sample count)')
+axes[0].legend(['First-time', 'Re-contacted'], fontsize=8)
+
+# Panel 2: Balance distribution shift by year
+for yr in sorted(df_full['year'].unique()):
+    mask_yr = df_full['year'] == yr
+    axes[1].hist(df_full.loc[mask_yr, 'balance'].clip(-2000, 15000), bins=40,
+                 alpha=0.4, density=True, label=str(yr))
+axes[1].set_xlabel('Balance (EUR, clipped)')
+axes[1].set_ylabel('Density')
+axes[1].set_title('Balance Distribution by Year\n(Are wealthier clients targeted later?)')
+axes[1].legend(fontsize=8)
+
+# Panel 3: Campaign contacts distribution by year
+for yr in sorted(df_full['year'].unique()):
+    mask_yr = df_full['year'] == yr
+    camps = df_full.loc[mask_yr, 'campaign'].clip(1, 15)
+    axes[2].hist(camps, bins=range(1, 16), alpha=0.4, density=True, label=str(yr))
+axes[2].set_xlabel('Number of Contacts This Campaign')
+axes[2].set_ylabel('Density')
+axes[2].set_title('Campaign Contact Distribution by Year\n(Did the team learn to stop calling early?)')
+axes[2].legend(fontsize=8)
+
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: tbl-optimization-evidence
+#| tbl-cap: "Quantitative summary of marketing team strategy evolution"
+
+opt_data = []
+for yr in sorted(df_full['year'].unique()):
+    mask = df_full['year'] == yr
+    d = df_full[mask]
+    opt_data.append({
+        'Year': yr,
+        'Total Calls': f"{mask.sum():,}",
+        'Success Rate': f"{d['y_bin'].mean():.1%}",
+        'Mean Contacts/Client': f"{d['campaign'].mean():.1f}",
+        'Retired+Student Share': f"{d['is_retired_or_student'].mean():.1%}",
+        'Cellular Share': f"{(d['contact']=='cellular').mean():.1%}",
+        'Re-contact Share': f"{d['contacted_before'].mean():.1%}",
+        'Median Balance': f"{d['balance'].median():,.0f}"
+    })
+print(pd.DataFrame(opt_data).to_string(index=False))
+```
+
+### Evidence and Interpretation
+
+Multiple patterns in the data are consistent with the hypothesis that the marketing team was actively learning and adapting its strategy, though disentangling the team's optimization from the improving macroeconomic environment is not straightforward. Below I present four lines of evidence and assess each critically.
+
+**1. Declining campaign intensity.** In mid-2008, the team made an average of 3-4 contacts per client, with some receiving 50+ calls. By 2009-2010, this dropped to roughly 1.5-2 contacts per person. This is consistent with the team learning that repeated calls to reluctant clients yield diminishing returns, a well-documented phenomenon in direct marketing. However, an alternative explanation exists: the team may simply have had fewer staff or budget in later periods, forcing a natural reduction in contact intensity. The *distribution* of contacts (rightmost panel above) is more revealing: in 2008, the long tail of high-contact clients was much more pronounced, suggesting the team actively chose to stop calling earlier rather than simply being constrained.
+
+**2. Shifting toward high-success demographics.** The share of retired and student clients rose from approximately 5% in 2008 to 24% in 2010, a nearly five-fold increase. These are the two job categories with the highest subscription rates (students ~29%, retirees ~25%). This compositional shift is the strongest evidence of intentional optimization: while macroeconomic conditions affect *everyone's* likelihood of subscribing, they do not explain why the team would preferentially call retirees unless it had learned that retirees are more receptive. That said, there is a confounding possibility: the bank's overall customer base may have shifted (e.g., younger working-age clients closing accounts during the recession), changing the pool from which the team draws.
+
+**3. Shrinking volume with rising quality.** Call volume declined from over 28,000 in 2008 to about 2,600 in 2010, while the success rate rose from 5% to 52%. Much of the success rate increase is macroeconomic, but the *scale* of the volume reduction is noteworthy. If the team were simply running the same playbook in a better environment, we would expect similar or even higher volume (since a favorable environment means more potential successes per call). The dramatic reduction in volume suggests deliberate selectivity; the team was "exploiting" what it had learned about which clients are worth calling.
+
+**4. Increasing use of prior contact history.** The share of clients who had been previously contacted in an earlier campaign rose from near zero in mid-2008 to over 40% in parts of 2010. This suggests the team increasingly leveraged its own historical data, re-targeting clients who had shown prior interest. The success rate among re-contacted clients (particularly those whose previous campaign ended in success) is substantially higher than among first-time contacts, validating this strategy.
+
+**The exploration-exploitation tradeoff.** These patterns collectively paint a picture of a team that began with broad exploration (wide net, high call volume, diverse demographics, many repeat contacts) and progressively shifted toward exploitation (narrow targeting of known high-success segments, fewer calls, more selective re-targeting). This is a natural and rational adaptation, but it introduces a subtle problem for model building: the dataset becomes less representative of the full client population over time. By 2010, the team may have effectively stopped calling entire segments (blue-collar workers with housing loans in adverse macro conditions, for instance), creating a selection bias that makes it impossible for a model trained on this data to evaluate whether those segments might actually be reachable under different conditions. Any model trained on this data inherits the team's implicit targeting policy as a blindspot, and would need deliberate exploration of under-sampled segments to overcome it.

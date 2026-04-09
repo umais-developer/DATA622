@@ -1,0 +1,553 @@
+    INFO: 2026-03-09 18:03:28,315:               log.py:   20: Logging to C:\Projects\DATA622\Week1\Lab1\mdpdf.log
+   DEBUG: 2026-03-09 18:03:28,315:               cli.py:  103: PresentationScript.md
+    INFO: 2026-03-09 18:03:28,331:         converter.py:   14: PresentationScript.md
+   DEBUG: 2026-03-09 18:03:28,356:      pdf_renderer.py:  470: printSegment: PRESENTATION SPEAKER SCRIPT
+   DEBUG: 2026-03-09 18:03:28,372:      pdf_renderer.py:  470: printSegment: Intelligent Pharmacy Inventory Management
+   DEBUG: 2026-03-09 18:03:28,385:      pdf_renderer.py:  470: printSegment: ~5 Minutes | Print This Out 
+   DEBUG: 2026-03-09 18:03:28,385:      pdf_renderer.py:  470: printSegment: &
+   DEBUG: 2026-03-09 18:03:28,386:      pdf_renderer.py:  470: printSegment:  Keep It On The Podium
+   DEBUG: 2026-03-09 18:03:28,388:      pdf_renderer.py:  470: printSegment: SLIDE 1 — Title (15 seconds)
+   DEBUG: 2026-03-09 18:03:28,406:      pdf_renderer.py:  470: printSegment: Good 
+   DEBUG: 2026-03-09 18:03:28,407:      pdf_renderer.py:  470: printSegment: [
+   DEBUG: 2026-03-09 18:03:28,409:      pdf_renderer.py:  470: printSegment: morning/afternoon
+   DEBUG: 2026-03-09 18:03:28,410:      pdf_renderer.py:  470: printSegment: ]
+   DEBUG: 2026-03-09 18:03:28,410:      pdf_renderer.py:  470: printSegment:  everyone. My name is 
+   DEBUG: 2026-03-09 18:03:28,411:      pdf_renderer.py:  470: printSegment: [
+   DEBUG: 2026-03-09 18:03:28,412:      pdf_renderer.py:  470: printSegment: NAME
+   DEBUG: 2026-03-09 18:03:28,412:      pdf_renderer.py:  470: printSegment: ]
+   DEBUG: 2026-03-09 18:03:28,413:      pdf_renderer.py:  470: printSegment: , and along with 
+   DEBUG: 2026-03-09 18:03:28,414:      pdf_renderer.py:  470: printSegment: [
+   DEBUG: 2026-03-09 18:03:28,414:      pdf_renderer.py:  470: printSegment: TEAMMATES
+   DEBUG: 2026-03-09 18:03:28,415:      pdf_renderer.py:  470: printSegment: ]
+   DEBUG: 2026-03-09 18:03:28,416:      pdf_renderer.py:  470: printSegment: , we
+   DEBUG: 2026-03-09 18:03:28,416:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,417:      pdf_renderer.py:  470: printSegment: re
+   DEBUG: 2026-03-09 18:03:28,418:      pdf_renderer.py:  470: printSegment: presenting our capstone project: 
+   DEBUG: 2026-03-09 18:03:28,423:      pdf_renderer.py:  470: printSegment: Intelligent Pharmacy Inventory Management
+   DEBUG: 2026-03-09 18:03:28,427:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,429:      pdf_renderer.py:  470: printSegment: In short — we built a machine learning system that tells pharmacists exactly 
+   DEBUG: 2026-03-09 18:03:28,446:      pdf_renderer.py:  470: printSegment: when
+   DEBUG: 2026-03-09 18:03:28,449:      pdf_renderer.py:  470: printSegment:  and 
+   DEBUG: 2026-03-09 18:03:28,450:      pdf_renderer.py:  470: printSegment: how much
+   DEBUG: 2026-03-09 18:03:28,452:      pdf_renderer.py:  470: printSegment:  to
+   DEBUG: 2026-03-09 18:03:28,453:      pdf_renderer.py:  470: printSegment: reorder, while making sure we 
+   DEBUG: 2026-03-09 18:03:28,453:      pdf_renderer.py:  470: printSegment: never
+   DEBUG: 2026-03-09 18:03:28,455:      pdf_renderer.py:  470: printSegment:  run out of a patient
+   DEBUG: 2026-03-09 18:03:28,455:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,456:      pdf_renderer.py:  470: printSegment: s medication.
+   DEBUG: 2026-03-09 18:03:28,458:      pdf_renderer.py:  470: printSegment: SLIDE 2 — The Problem (45 seconds)
+   DEBUG: 2026-03-09 18:03:28,458:      pdf_renderer.py:  470: printSegment: So here
+   DEBUG: 2026-03-09 18:03:28,459:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,460:      pdf_renderer.py:  470: printSegment: s the core tension every pharmacy faces. We call it the 
+   DEBUG: 2026-03-09 18:03:28,461:      pdf_renderer.py:  470: printSegment: Optimization Paradox
+   DEBUG: 2026-03-09 18:03:28,462:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,463:      pdf_renderer.py:  470: printSegment: On one side, you have 
+   DEBUG: 2026-03-09 18:03:28,463:      pdf_renderer.py:  470: printSegment: stockouts
+   DEBUG: 2026-03-09 18:03:28,465:      pdf_renderer.py:  470: printSegment: . If a patient walks in to refill their blood pressure medication and
+   DEBUG: 2026-03-09 18:03:28,466:      pdf_renderer.py:  470: printSegment: you don
+   DEBUG: 2026-03-09 18:03:28,467:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,468:      pdf_renderer.py:  470: printSegment: t have it — that
+   DEBUG: 2026-03-09 18:03:28,468:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,469:      pdf_renderer.py:  470: printSegment: s not just lost revenue. That
+   DEBUG: 2026-03-09 18:03:28,470:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,471:      pdf_renderer.py:  470: printSegment: s a 
+   DEBUG: 2026-03-09 18:03:28,472:      pdf_renderer.py:  470: printSegment: health risk
+   DEBUG: 2026-03-09 18:03:28,474:      pdf_renderer.py:  470: printSegment: . They could miss doses. They could
+   DEBUG: 2026-03-09 18:03:28,475:      pdf_renderer.py:  470: printSegment: switch pharmacies permanently.
+   DEBUG: 2026-03-09 18:03:28,476:      pdf_renderer.py:  470: printSegment: On the other side, you have 
+   DEBUG: 2026-03-09 18:03:28,477:      pdf_renderer.py:  470: printSegment: wastage
+   DEBUG: 2026-03-09 18:03:28,483:      pdf_renderer.py:  470: printSegment: . Medications expire. If you over-order, those drugs sit on the
+   DEBUG: 2026-03-09 18:03:28,485:      pdf_renderer.py:  470: printSegment: shelf, expire, and get destroyed. For an independent pharmacy, that
+   DEBUG: 2026-03-09 18:03:28,485:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,488:      pdf_renderer.py:  470: printSegment: s thousands of dollars a year —
+   DEBUG: 2026-03-09 18:03:28,489:      pdf_renderer.py:  470: printSegment: literally thrown in the trash.
+   DEBUG: 2026-03-09 18:03:28,490:      pdf_renderer.py:  470: printSegment: And here
+   DEBUG: 2026-03-09 18:03:28,491:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,492:      pdf_renderer.py:  470: printSegment: s the kicker — most pharmacies today still use 
+   DEBUG: 2026-03-09 18:03:28,493:      pdf_renderer.py:  470: printSegment: manual min/max rules
+   DEBUG: 2026-03-09 18:03:28,495:      pdf_renderer.py:  470: printSegment: . A pharmacist looks at
+   DEBUG: 2026-03-09 18:03:28,496:      pdf_renderer.py:  470: printSegment: the shelf, sees it
+   DEBUG: 2026-03-09 18:03:28,496:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,497:      pdf_renderer.py:  470: printSegment: s low, and places an order. No seasonality. No data. Just gut feeling.
+   DEBUG: 2026-03-09 18:03:28,499:      pdf_renderer.py:  470: printSegment: Our project replaces that gut feeling with machine learning.
+   DEBUG: 2026-03-09 18:03:28,500:      pdf_renderer.py:  470: printSegment: SLIDE 3 — Literature Review (45 seconds)
+   DEBUG: 2026-03-09 18:03:28,502:      pdf_renderer.py:  470: printSegment: Before we built anything, we looked at what the industry is already doing.
+   DEBUG: 2026-03-09 18:03:28,503:      pdf_renderer.py:  470: printSegment: Traditionally
+   DEBUG: 2026-03-09 18:03:28,505:      pdf_renderer.py:  470: printSegment: , pharmacies use things like ABC/XYZ analysis — that
+   DEBUG: 2026-03-09 18:03:28,506:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,520:      pdf_renderer.py:  470: printSegment: s classifying drugs by revenue
+   DEBUG: 2026-03-09 18:03:28,529:      pdf_renderer.py:  470: printSegment: and demand variability — and Vendor Managed Inventory, where wholesalers like McKesson manage
+   DEBUG: 2026-03-09 18:03:28,530:      pdf_renderer.py:  470: printSegment: stock levels for you. The problem? VMI optimizes for the 
+   DEBUG: 2026-03-09 18:03:28,531:      pdf_renderer.py:  470: printSegment: wholesaler
+   DEBUG: 2026-03-09 18:03:28,532:      pdf_renderer.py:  470: printSegment: , not the 
+   DEBUG: 2026-03-09 18:03:28,534:      pdf_renderer.py:  470: printSegment: pharmacy
+   DEBUG: 2026-03-09 18:03:28,534:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,535:      pdf_renderer.py:  470: printSegment: On the 
+   DEBUG: 2026-03-09 18:03:28,537:      pdf_renderer.py:  470: printSegment: ML side
+   DEBUG: 2026-03-09 18:03:28,539:      pdf_renderer.py:  470: printSegment: , there
+   DEBUG: 2026-03-09 18:03:28,539:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,552:      pdf_renderer.py:  470: printSegment: s solid recent work. Rathipriya and colleagues used Facebook Prophet — the
+   DEBUG: 2026-03-09 18:03:28,555:      pdf_renderer.py:  470: printSegment: same model we use — on retail pharmacy data and got 12 to 18 percent MAPE for chronic medications.
+   DEBUG: 2026-03-09 18:03:28,556:      pdf_renderer.py:  470: printSegment: Oliveira
+   DEBUG: 2026-03-09 18:03:28,557:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,560:      pdf_renderer.py:  470: printSegment: s group at a hospital compared Prophet against LSTM and XGBoost and found Prophet
+   DEBUG: 2026-03-09 18:03:28,562:      pdf_renderer.py:  470: printSegment: performed comparably with way less tuning.
+   DEBUG: 2026-03-09 18:03:28,563:      pdf_renderer.py:  470: printSegment: CVS Health
+   DEBUG: 2026-03-09 18:03:28,565:      pdf_renderer.py:  470: printSegment:  is doing this at scale with gradient-boosted trees and prescription refill cycle data.
+   DEBUG: 2026-03-09 18:03:28,566:      pdf_renderer.py:  470: printSegment: Where we fit in
+   DEBUG: 2026-03-09 18:03:28,568:      pdf_renderer.py:  470: printSegment: : we combine Prophet
+   DEBUG: 2026-03-09 18:03:28,569:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,571:      pdf_renderer.py:  470: printSegment: s forecasting power with something most of these studies are
+   DEBUG: 2026-03-09 18:03:28,572:      pdf_renderer.py:  470: printSegment: missing — 
+   DEBUG: 2026-03-09 18:03:28,573:      pdf_renderer.py:  470: printSegment: asymmetric cost functions
+   DEBUG: 2026-03-09 18:03:28,574:      pdf_renderer.py:  470: printSegment:  that treat stockouts and wastage differently. That
+   DEBUG: 2026-03-09 18:03:28,575:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,577:      pdf_renderer.py:  470: printSegment: s our key
+   DEBUG: 2026-03-09 18:03:28,578:      pdf_renderer.py:  470: printSegment: contribution.
+   DEBUG: 2026-03-09 18:03:28,581:      pdf_renderer.py:  470: printSegment: SLIDE 4 — Why MAPE Is Not Enough (40 seconds)
+   DEBUG: 2026-03-09 18:03:28,583:      pdf_renderer.py:  470: printSegment: Now, our original proposal used MAPE — Mean Absolute Percentage Error — as our primary metric. And
+   DEBUG: 2026-03-09 18:03:28,584:      pdf_renderer.py:  470: printSegment: it
+   DEBUG: 2026-03-09 18:03:28,585:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,587:      pdf_renderer.py:  470: printSegment: s a good metric for 
+   DEBUG: 2026-03-09 18:03:28,588:      pdf_renderer.py:  470: printSegment: accuracy
+   DEBUG: 2026-03-09 18:03:28,589:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,590:      pdf_renderer.py:  470: printSegment: But here
+   DEBUG: 2026-03-09 18:03:28,591:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,591:      pdf_renderer.py:  470: printSegment: s the problem: 
+   DEBUG: 2026-03-09 18:03:28,592:      pdf_renderer.py:  470: printSegment: MAPE is symmetric
+   DEBUG: 2026-03-09 18:03:28,595:      pdf_renderer.py:  470: printSegment: . It penalizes over-predicting by 10 units the exact
+   DEBUG: 2026-03-09 18:03:28,596:      pdf_renderer.py:  470: printSegment: same as under-predicting by 10 units.
+   DEBUG: 2026-03-09 18:03:28,597:      pdf_renderer.py:  470: printSegment: In the real world, those are 
+   DEBUG: 2026-03-09 18:03:28,598:      pdf_renderer.py:  470: printSegment: completely different situations
+   DEBUG: 2026-03-09 18:03:28,606:      pdf_renderer.py:  470: printSegment: . If I over-predict and order 10 extra
+   DEBUG: 2026-03-09 18:03:28,606:      pdf_renderer.py:  470: printSegment: units of Amoxicillin — okay, I have some extra holding cost, maybe a small expiration risk. Minor.
+   DEBUG: 2026-03-09 18:03:28,608:      pdf_renderer.py:  470: printSegment: But if I under-predict by 10 units? Patients can
+   DEBUG: 2026-03-09 18:03:28,608:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,610:      pdf_renderer.py:  470: printSegment: t fill their prescriptions. I
+   DEBUG: 2026-03-09 18:03:28,610:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,612:      pdf_renderer.py:  470: printSegment: m making emergency calls
+   DEBUG: 2026-03-09 18:03:28,613:      pdf_renderer.py:  470: printSegment: to the wholesaler. I
+   DEBUG: 2026-03-09 18:03:28,613:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,615:      pdf_renderer.py:  470: printSegment: m paying expedited shipping. And worst case — a patient leaves and never comes
+   DEBUG: 2026-03-09 18:03:28,616:      pdf_renderer.py:  470: printSegment: back.
+   DEBUG: 2026-03-09 18:03:28,617:      pdf_renderer.py:  470: printSegment: So we needed a metric that 
+   DEBUG: 2026-03-09 18:03:28,617:      pdf_renderer.py:  470: printSegment: knows
+   DEBUG: 2026-03-09 18:03:28,619:      pdf_renderer.py:  470: printSegment:  a stockout is way worse than having a few extra pills on the shelf.
+   DEBUG: 2026-03-09 18:03:28,619:      pdf_renderer.py:  470: printSegment: That
+   DEBUG: 2026-03-09 18:03:28,620:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,621:      pdf_renderer.py:  470: printSegment: s what led us to define explicit cost functions.
+   DEBUG: 2026-03-09 18:03:28,622:      pdf_renderer.py:  470: printSegment: SLIDE 5 — Cost Functions (50 seconds)
+   DEBUG: 2026-03-09 18:03:28,624:      pdf_renderer.py:  470: printSegment: We defined two cost functions. Let me walk through them simply.
+   DEBUG: 2026-03-09 18:03:28,624:      pdf_renderer.py:  470: printSegment: Wastage cost
+   DEBUG: 2026-03-09 18:03:28,626:      pdf_renderer.py:  470: printSegment:  kicks in when you order 
+   DEBUG: 2026-03-09 18:03:28,626:      pdf_renderer.py:  470: printSegment: more
+   DEBUG: 2026-03-09 18:03:28,628:      pdf_renderer.py:  470: printSegment:  than you needed. It
+   DEBUG: 2026-03-09 18:03:28,628:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,637:      pdf_renderer.py:  470: printSegment: s the number of excess units, times
+   DEBUG: 2026-03-09 18:03:28,639:      pdf_renderer.py:  470: printSegment: the cost of each unit expiring plus the daily cost of storing it. For most drugs, this works out to 
+   DEBUG: 2026-03-09 18:03:28,640:      pdf_renderer.py:  470: printSegment: pennies per unit
+   DEBUG: 2026-03-09 18:03:28,641:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,642:      pdf_renderer.py:  470: printSegment: Stockout cost
+   DEBUG: 2026-03-09 18:03:28,643:      pdf_renderer.py:  470: printSegment:  kicks in when demand exceeds what you ordered. And this is where the 
+   DEBUG: 2026-03-09 18:03:28,645:      pdf_renderer.py:  470: printSegment: alpha
+   DEBUG: 2026-03-09 18:03:28,646:      pdf_renderer.py:  470: printSegment: multiplier
+   DEBUG: 2026-03-09 18:03:28,648:      pdf_renderer.py:  470: printSegment:  comes in. We set alpha to 10 — meaning the model treats a stockout as 
+   DEBUG: 2026-03-09 18:03:28,649:      pdf_renderer.py:  470: printSegment: ten times more
+   DEBUG: 2026-03-09 18:03:28,649:      pdf_renderer.py:  470: printSegment: expensive
+   DEBUG: 2026-03-09 18:03:28,655:      pdf_renderer.py:  470: printSegment:  than holding an extra unit. On top of that, you add the emergency reorder cost and the
+   DEBUG: 2026-03-09 18:03:28,657:      pdf_renderer.py:  470: printSegment: estimated revenue you lose if that patient switches pharmacies.
+   DEBUG: 2026-03-09 18:03:28,657:      pdf_renderer.py:  470: printSegment: Here
+   DEBUG: 2026-03-09 18:03:28,658:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,660:      pdf_renderer.py:  470: printSegment: s a concrete example with Amoxicillin. Same 10-unit error, two directions:
+   DEBUG: 2026-03-09 18:03:28,661:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-03-09 18:03:28,665:      pdf_renderer.py:  470: printSegment: Over-predict by 10? Costs you 
+   DEBUG: 2026-03-09 18:03:28,667:      pdf_renderer.py:  470: printSegment: 55 cents
+   DEBUG: 2026-03-09 18:03:28,668:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,669:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-03-09 18:03:28,670:      pdf_renderer.py:  470: printSegment: Under-predict by 10? Costs you 
+   DEBUG: 2026-03-09 18:03:28,671:      pdf_renderer.py:  470: printSegment: $400
+   DEBUG: 2026-03-09 18:03:28,672:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,673:      pdf_renderer.py:  470: printSegment: That
+   DEBUG: 2026-03-09 18:03:28,674:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,675:      pdf_renderer.py:  470: printSegment: s a 
+   DEBUG: 2026-03-09 18:03:28,677:      pdf_renderer.py:  470: printSegment: 727x difference
+   DEBUG: 2026-03-09 18:03:28,678:      pdf_renderer.py:  470: printSegment: . And that
+   DEBUG: 2026-03-09 18:03:28,679:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,684:      pdf_renderer.py:  470: printSegment: s exactly the behavior we want — the system will always prefer to
+   DEBUG: 2026-03-09 18:03:28,686:      pdf_renderer.py:  470: printSegment: slightly over-order rather than risk a single stockout. 
+   DEBUG: 2026-03-09 18:03:28,688:      pdf_renderer.py:  470: printSegment: Patient safety first.
+   DEBUG: 2026-03-09 18:03:28,689:      pdf_renderer.py:  470: printSegment: SLIDE 6 — Technical Architecture (40 seconds)
+   DEBUG: 2026-03-09 18:03:28,691:      pdf_renderer.py:  470: printSegment: Here
+   DEBUG: 2026-03-09 18:03:28,692:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,700:      pdf_renderer.py:  470: printSegment: s how it all connects. The top row is our forecast pipeline — synthetic data goes through
+   DEBUG: 2026-03-09 18:03:28,702:      pdf_renderer.py:  470: printSegment: preprocessing, into Facebook Prophet, which produces a 30-day probabilistic forecast.
+   DEBUG: 2026-03-09 18:03:28,703:      pdf_renderer.py:  470: printSegment: The 
+   DEBUG: 2026-03-09 18:03:28,704:      pdf_renderer.py:  470: printSegment: new layer
+   DEBUG: 2026-03-09 18:03:28,707:      pdf_renderer.py:  470: printSegment:  — shown at the bottom in red — is the cost optimization. The forecast
+   DEBUG: 2026-03-09 18:03:28,707:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,715:      pdf_renderer.py:  470: printSegment: s prediction intervals
+   DEBUG: 2026-03-09 18:03:28,719:      pdf_renderer.py:  470: printSegment: feed into both cost functions. We evaluate candidate order quantities across that distribution and
+   DEBUG: 2026-03-09 18:03:28,721:      pdf_renderer.py:  470: printSegment: pick the one that 
+   DEBUG: 2026-03-09 18:03:28,723:      pdf_renderer.py:  470: printSegment: minimizes total expected cost
+   DEBUG: 2026-03-09 18:03:28,723:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-03-09 18:03:28,727:      pdf_renderer.py:  470: printSegment: Because of that alpha equals 10 penalty, the optimal order quantity Q-star consistently lands near the
+   DEBUG: 2026-03-09 18:03:28,728:      pdf_renderer.py:  470: printSegment: 
+   DEBUG: 2026-03-09 18:03:28,729:      pdf_renderer.py:  470: printSegment: 80th to 90th percentile
+   DEBUG: 2026-03-09 18:03:28,730:      pdf_renderer.py:  470: printSegment:  of the predicted demand — not the median. That
+   DEBUG: 2026-03-09 18:03:28,731:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,733:      pdf_renderer.py:  470: printSegment: s the mathematical mechanism
+   DEBUG: 2026-03-09 18:03:28,735:      pdf_renderer.py:  470: printSegment: that ensures we prioritize patient safety.
+   DEBUG: 2026-03-09 18:03:28,736:      pdf_renderer.py:  470: printSegment: And all of this is surfaced through a 
+   DEBUG: 2026-03-09 18:03:28,737:      pdf_renderer.py:  470: printSegment: Streamlit dashboard
+   DEBUG: 2026-03-09 18:03:28,740:      pdf_renderer.py:  470: printSegment:  where a pharmacist can see real-time
+   DEBUG: 2026-03-09 18:03:28,741:      pdf_renderer.py:  470: printSegment: reorder alerts for all 8 medications.
+   DEBUG: 2026-03-09 18:03:28,743:      pdf_renderer.py:  470: printSegment: SLIDE 7 — Who Else Is Doing This (30 seconds)
+   DEBUG: 2026-03-09 18:03:28,745:      pdf_renderer.py:  470: printSegment: Quick landscape scan — who else is using time-series methods in pharmacy?
+   DEBUG: 2026-03-09 18:03:28,747:      pdf_renderer.py:  470: printSegment: CVS Health is the biggest player — they use gradient-boosted trees with prescription refill data.
+   DEBUG: 2026-03-09 18:03:28,748:      pdf_renderer.py:  470: printSegment: Rathipriya
+   DEBUG: 2026-03-09 18:03:28,749:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,765:      pdf_renderer.py:  470: printSegment: s group proved Prophet works well for retail pharmacy. Oliveira showed it holds up
+   DEBUG: 2026-03-09 18:03:28,771:      pdf_renderer.py:  470: printSegment: against deep learning in hospitals. And the major wholesalers — McKesson, AmerisourceBergen — run
+   DEBUG: 2026-03-09 18:03:28,773:      pdf_renderer.py:  470: printSegment: VMI systems, but those optimize for 
+   DEBUG: 2026-03-09 18:03:28,773:      pdf_renderer.py:  470: printSegment: their
+   DEBUG: 2026-03-09 18:03:28,775:      pdf_renderer.py:  470: printSegment:  logistics, not the pharmacy
+   DEBUG: 2026-03-09 18:03:28,777:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,778:      pdf_renderer.py:  470: printSegment: s patients.
+   DEBUG: 2026-03-09 18:03:28,779:      pdf_renderer.py:  470: printSegment: Our differentiator
+   DEBUG: 2026-03-09 18:03:28,780:      pdf_renderer.py:  470: printSegment: : we
+   DEBUG: 2026-03-09 18:03:28,781:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,786:      pdf_renderer.py:  470: printSegment: re the only approach that combines Prophet forecasting with explicit
+   DEBUG: 2026-03-09 18:03:28,787:      pdf_renderer.py:  470: printSegment: asymmetric cost penalties, and we
+   DEBUG: 2026-03-09 18:03:28,788:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,789:      pdf_renderer.py:  470: printSegment: re designing it to be open-source and pharmacy-centric.
+   DEBUG: 2026-03-09 18:03:28,790:      pdf_renderer.py:  470: printSegment: SLIDE 8 — Evaluation 
+   DEBUG: 2026-03-09 18:03:28,791:      pdf_renderer.py:  470: printSegment: &
+   DEBUG: 2026-03-09 18:03:28,792:      pdf_renderer.py:  470: printSegment:  Timeline (30 seconds)
+   DEBUG: 2026-03-09 18:03:28,793:      pdf_renderer.py:  470: printSegment: We evaluate on 
+   DEBUG: 2026-03-09 18:03:28,793:      pdf_renderer.py:  470: printSegment: three axes
+   DEBUG: 2026-03-09 18:03:28,795:      pdf_renderer.py:  470: printSegment: , not just one. Forecast accuracy via MAPE — we
+   DEBUG: 2026-03-09 18:03:28,795:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,814:      pdf_renderer.py:  470: printSegment: re targeting under 20
+   DEBUG: 2026-03-09 18:03:28,826:      pdf_renderer.py:  470: printSegment: percent for chronic drugs. Business cost via our asymmetric loss function. And service level — we want
+   DEBUG: 2026-03-09 18:03:28,828:      pdf_renderer.py:  470: printSegment: a fill rate above 95 percent, meaning 95 percent of demand is met from existing stock.
+   DEBUG: 2026-03-09 18:03:28,829:      pdf_renderer.py:  470: printSegment: The timeline is 10 weeks. Data generation and EDA are done. We
+   DEBUG: 2026-03-09 18:03:28,830:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,837:      pdf_renderer.py:  470: printSegment: re now in the modeling and cost
+   DEBUG: 2026-03-09 18:03:28,838:      pdf_renderer.py:  470: printSegment: function implementation phase, with the dashboard and final report coming in weeks 9 and 10.
+   DEBUG: 2026-03-09 18:03:28,840:      pdf_renderer.py:  470: printSegment: SLIDE 9 — Thank You (15 seconds)
+   DEBUG: 2026-03-09 18:03:28,841:      pdf_renderer.py:  470: printSegment: To wrap up — we started with a simple idea: help pharmacists order smarter. But by layering 
+   DEBUG: 2026-03-09 18:03:28,842:      pdf_renderer.py:  470: printSegment: asymmetric cost functions
+   DEBUG: 2026-03-09 18:03:28,843:      pdf_renderer.py:  470: printSegment:  on top of 
+   DEBUG: 2026-03-09 18:03:28,844:      pdf_renderer.py:  470: printSegment: time-series forecasting
+   DEBUG: 2026-03-09 18:03:28,845:      pdf_renderer.py:  470: printSegment: , we
+   DEBUG: 2026-03-09 18:03:28,845:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,846:      pdf_renderer.py:  470: printSegment: ve built something that doesn
+   DEBUG: 2026-03-09 18:03:28,848:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,849:      pdf_renderer.py:  470: printSegment: t
+   DEBUG: 2026-03-09 18:03:28,850:      pdf_renderer.py:  470: printSegment: just predict demand — it makes 
+   DEBUG: 2026-03-09 18:03:28,851:      pdf_renderer.py:  470: printSegment: cost-aware decisions
+   DEBUG: 2026-03-09 18:03:28,852:      pdf_renderer.py:  470: printSegment:  that put patient safety first.
+   DEBUG: 2026-03-09 18:03:28,853:      pdf_renderer.py:  470: printSegment: Thank you. We
+   DEBUG: 2026-03-09 18:03:28,854:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,854:      pdf_renderer.py:  470: printSegment: re happy to take questions.
+   DEBUG: 2026-03-09 18:03:28,856:      pdf_renderer.py:  470: printSegment: \
+   DEBUG: 2026-03-09 18:03:28,856:      pdf_renderer.py:  470: printSegment: newpage
+   DEBUG: 2026-03-09 18:03:28,857:      pdf_renderer.py:  470: printSegment: CHEAT SHEET: LIKELY QUESTIONS 
+   DEBUG: 2026-03-09 18:03:28,858:      pdf_renderer.py:  470: printSegment: &
+   DEBUG: 2026-03-09 18:03:28,859:      pdf_renderer.py:  470: printSegment:  STRONG ANSWERS
+   DEBUG: 2026-03-09 18:03:28,860:      pdf_renderer.py:  470: printSegment: Print This On The Back / Second Page
+   DEBUG: 2026-03-09 18:03:28,862:      pdf_renderer.py:  470: printSegment: Q1: 
+   DEBUG: 2026-03-09 18:03:28,862:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:28,863:      pdf_renderer.py:  470: printSegment: Why did you choose alpha = 10? Why not 5 or 20?
+   DEBUG: 2026-03-09 18:03:28,865:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:28,899:      pdf_renderer.py:  470: printSegment: Great question. The value of 10 comes from pharmaceutical supply chain literature — specifically
+   DEBUG: 2026-03-09 18:03:28,912:      pdf_renderer.py:  470: printSegment: Uthayakumar and Priyan (2013), who found stockout penalties in pharmacy settings range from 5x
+   DEBUG: 2026-03-09 18:03:28,914:      pdf_renderer.py:  470: printSegment: to 15x the holding cost. We chose 10 as a reasonable midpoint. In practice, alpha is a 
+   DEBUG: 2026-03-09 18:03:28,916:      pdf_renderer.py:  470: printSegment: tunable
+   DEBUG: 2026-03-09 18:03:28,917:      pdf_renderer.py:  470: printSegment: parameter
+   DEBUG: 2026-03-09 18:03:28,925:      pdf_renderer.py:  470: printSegment:  — a pharmacy with very expensive medications might set it higher, while one with easily
+   DEBUG: 2026-03-09 18:03:28,926:      pdf_renderer.py:  470: printSegment: substitutable generics might set it lower. The framework is flexible.
+   DEBUG: 2026-03-09 18:03:28,928:      pdf_renderer.py:  470: printSegment: Q2: 
+   DEBUG: 2026-03-09 18:03:28,929:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:28,930:      pdf_renderer.py:  470: printSegment: Your MAPE values are above 20%. Doesn
+   DEBUG: 2026-03-09 18:03:28,931:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,932:      pdf_renderer.py:  470: printSegment: t that mean the model isn
+   DEBUG: 2026-03-09 18:03:28,933:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,935:      pdf_renderer.py:  470: printSegment: t working?
+   DEBUG: 2026-03-09 18:03:28,937:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:28,950:      pdf_renderer.py:  470: printSegment: Fair point. Our current MAPE ranges from about 24% for stable drugs like Metformin up to 57% for
+   DEBUG: 2026-03-09 18:03:28,951:      pdf_renderer.py:  470: printSegment: highly seasonal drugs like Cetirizine. Two things to note: First, this is on 
+   DEBUG: 2026-03-09 18:03:28,953:      pdf_renderer.py:  470: printSegment: synthetic data with
+   DEBUG: 2026-03-09 18:03:28,955:      pdf_renderer.py:  470: printSegment: intentionally high noise
+   DEBUG: 2026-03-09 18:03:28,972:      pdf_renderer.py:  470: printSegment:  — Poisson-distributed daily variation on top of seasonality. Real pharmacy
+   DEBUG: 2026-03-09 18:03:28,978:      pdf_renderer.py:  470: printSegment: data with actual prescription refill patterns would likely be smoother. Second — and this is the key
+   DEBUG: 2026-03-09 18:03:28,979:      pdf_renderer.py:  470: printSegment: insight from our revision — 
+   DEBUG: 2026-03-09 18:03:28,980:      pdf_renderer.py:  470: printSegment: MAPE alone doesn
+   DEBUG: 2026-03-09 18:03:28,981:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,982:      pdf_renderer.py:  470: printSegment: t determine business performance
+   DEBUG: 2026-03-09 18:03:28,989:      pdf_renderer.py:  470: printSegment: . Even a model
+   DEBUG: 2026-03-09 18:03:28,991:      pdf_renderer.py:  470: printSegment: with 30% MAPE can produce excellent business outcomes if the cost functions are properly
+   DEBUG: 2026-03-09 18:03:28,992:      pdf_renderer.py:  470: printSegment: calibrated. That
+   DEBUG: 2026-03-09 18:03:28,993:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:28,994:      pdf_renderer.py:  470: printSegment: s exactly why we moved beyond MAPE to asymmetric loss as our primary business
+   DEBUG: 2026-03-09 18:03:28,995:      pdf_renderer.py:  470: printSegment: metric.
+   DEBUG: 2026-03-09 18:03:28,998:      pdf_renderer.py:  470: printSegment: Q3: 
+   DEBUG: 2026-03-09 18:03:28,999:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,000:      pdf_renderer.py:  470: printSegment: How is this different from what CVS or McKesson already does?
+   DEBUG: 2026-03-09 18:03:29,000:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,003:      pdf_renderer.py:  470: printSegment: CVS and McKesson have massive proprietary systems. Three key differences: First, their systems
+   DEBUG: 2026-03-09 18:03:29,004:      pdf_renderer.py:  470: printSegment: are 
+   DEBUG: 2026-03-09 18:03:29,005:      pdf_renderer.py:  470: printSegment: closed-source and proprietary
+   DEBUG: 2026-03-09 18:03:29,007:      pdf_renderer.py:  470: printSegment:  — an independent pharmacy can
+   DEBUG: 2026-03-09 18:03:29,008:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,009:      pdf_renderer.py:  470: printSegment: t use them. Second, VMI systems
+   DEBUG: 2026-03-09 18:03:29,009:      pdf_renderer.py:  470: printSegment: like McKesson
+   DEBUG: 2026-03-09 18:03:29,010:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,011:      pdf_renderer.py:  470: printSegment: s optimize for the 
+   DEBUG: 2026-03-09 18:03:29,011:      pdf_renderer.py:  470: printSegment: wholesaler
+   DEBUG: 2026-03-09 18:03:29,012:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,013:      pdf_renderer.py:  470: printSegment: s
+   DEBUG: 2026-03-09 18:03:29,013:      pdf_renderer.py:  470: printSegment:  logistics, not the pharmacy
+   DEBUG: 2026-03-09 18:03:29,015:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,015:      pdf_renderer.py:  470: printSegment: s patients. Third, we
+   DEBUG: 2026-03-09 18:03:29,016:      pdf_renderer.py:  470: printSegment: specifically designed 
+   DEBUG: 2026-03-09 18:03:29,017:      pdf_renderer.py:  470: printSegment: asymmetric cost functions
+   DEBUG: 2026-03-09 18:03:29,030:      pdf_renderer.py:  470: printSegment:  that encode the clinical priority of never running
+   DEBUG: 2026-03-09 18:03:29,039:      pdf_renderer.py:  470: printSegment: out of a maintenance medication. Most commercial systems optimize for revenue or logistics
+   DEBUG: 2026-03-09 18:03:29,041:      pdf_renderer.py:  470: printSegment: efficiency, not patient safety as a first-class objective.
+   DEBUG: 2026-03-09 18:03:29,043:      pdf_renderer.py:  470: printSegment: Q4: 
+   DEBUG: 2026-03-09 18:03:29,044:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,045:      pdf_renderer.py:  470: printSegment: You
+   DEBUG: 2026-03-09 18:03:29,046:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,048:      pdf_renderer.py:  470: printSegment: re using synthetic data. How do you know this would work on real pharmacy
+   DEBUG: 2026-03-09 18:03:29,049:      pdf_renderer.py:  470: printSegment: data?
+   DEBUG: 2026-03-09 18:03:29,050:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,089:      pdf_renderer.py:  470: printSegment: Excellent question. Our synthetic data generator is calibrated against CDC FluView surveillance
+   DEBUG: 2026-03-09 18:03:29,103:      pdf_renderer.py:  470: printSegment: data for seasonal patterns and CMS public data for prescription volume distributions. The weekly
+   DEBUG: 2026-03-09 18:03:29,105:      pdf_renderer.py:  470: printSegment: patterns — Monday surge, weekend dip — mirror real pharmacy operations. That said, synthetic data is a 
+   DEBUG: 2026-03-09 18:03:29,107:      pdf_renderer.py:  470: printSegment: limitation
+   DEBUG: 2026-03-09 18:03:29,126:      pdf_renderer.py:  470: printSegment:  we acknowledge. The architecture is designed so that swapping in real data requires
+   DEBUG: 2026-03-09 18:03:29,133:      pdf_renderer.py:  470: printSegment: changing only the data ingestion layer — the Prophet models, cost functions, and decision engine are
+   DEBUG: 2026-03-09 18:03:29,134:      pdf_renderer.py:  470: printSegment: data-agnostic. If we had access to a pharmacy
+   DEBUG: 2026-03-09 18:03:29,134:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,136:      pdf_renderer.py:  470: printSegment: s POS system, we could retrain in hours.
+   DEBUG: 2026-03-09 18:03:29,137:      pdf_renderer.py:  470: printSegment: Q5: 
+   DEBUG: 2026-03-09 18:03:29,138:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,139:      pdf_renderer.py:  470: printSegment: Why Prophet and not ARIMA, LSTM, or XGBoost?
+   DEBUG: 2026-03-09 18:03:29,140:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,142:      pdf_renderer.py:  470: printSegment: We evaluated the literature before choosing. Prophet has three advantages for pharmacy data: 
+   DEBUG: 2026-03-09 18:03:29,143:      pdf_renderer.py:  470: printSegment: (1)
+   DEBUG: 2026-03-09 18:03:29,143:      pdf_renderer.py:  470: printSegment:  It
+   DEBUG: 2026-03-09 18:03:29,145:      pdf_renderer.py:  470: printSegment: handles 
+   DEBUG: 2026-03-09 18:03:29,145:      pdf_renderer.py:  470: printSegment: missing data and outliers
+   DEBUG: 2026-03-09 18:03:29,147:      pdf_renderer.py:  470: printSegment:  gracefully — pharmacies have gaps on holidays and during
+   DEBUG: 2026-03-09 18:03:29,148:      pdf_renderer.py:  470: printSegment: stockouts. 
+   DEBUG: 2026-03-09 18:03:29,149:      pdf_renderer.py:  470: printSegment: (2)
+   DEBUG: 2026-03-09 18:03:29,150:      pdf_renderer.py:  470: printSegment:  It natively produces 
+   DEBUG: 2026-03-09 18:03:29,151:      pdf_renderer.py:  470: printSegment: prediction intervals
+   DEBUG: 2026-03-09 18:03:29,159:      pdf_renderer.py:  470: printSegment: , which we need for the cost function
+   DEBUG: 2026-03-09 18:03:29,162:      pdf_renderer.py:  470: printSegment: optimization — ARIMA gives you point forecasts, and getting reliable intervals from LSTM is much
+   DEBUG: 2026-03-09 18:03:29,163:      pdf_renderer.py:  470: printSegment: harder. 
+   DEBUG: 2026-03-09 18:03:29,164:      pdf_renderer.py:  470: printSegment: (3)
+   DEBUG: 2026-03-09 18:03:29,165:      pdf_renderer.py:  470: printSegment:  It
+   DEBUG: 2026-03-09 18:03:29,165:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,167:      pdf_renderer.py:  470: printSegment: s 
+   DEBUG: 2026-03-09 18:03:29,168:      pdf_renderer.py:  470: printSegment: interpretable
+   DEBUG: 2026-03-09 18:03:29,169:      pdf_renderer.py:  470: printSegment:  — we can show the pharmacist 
+   DEBUG: 2026-03-09 18:03:29,169:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,171:      pdf_renderer.py:  470: printSegment: this spike is because of flu season plus a
+   DEBUG: 2026-03-09 18:03:29,172:      pdf_renderer.py:  470: printSegment: Monday effect,
+   DEBUG: 2026-03-09 18:03:29,173:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,179:      pdf_renderer.py:  470: printSegment:  which builds trust. Oliveira et al. (2023) confirmed Prophet performs comparably
+   DEBUG: 2026-03-09 18:03:29,180:      pdf_renderer.py:  470: printSegment: to LSTM for pharmaceutical data with significantly less tuning.
+   DEBUG: 2026-03-09 18:03:29,182:      pdf_renderer.py:  470: printSegment: Q6: 
+   DEBUG: 2026-03-09 18:03:29,182:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,183:      pdf_renderer.py:  470: printSegment: What happens if the expiration probability estimate is wrong?
+   DEBUG: 2026-03-09 18:03:29,184:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,186:      pdf_renderer.py:  470: printSegment: The wastage function includes p
+   DEBUG: 2026-03-09 18:03:29,186:      pdf_renderer.py:  470: printSegment: _
+   DEBUG: 2026-03-09 18:03:29,191:      pdf_renderer.py:  470: printSegment: exp — the probability a unit expires before sale. In practice, this
+   DEBUG: 2026-03-09 18:03:29,192:      pdf_renderer.py:  470: printSegment: would be estimated from the drug
+   DEBUG: 2026-03-09 18:03:29,193:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,193:      pdf_renderer.py:  470: printSegment: s shelf life and the pharmacy
+   DEBUG: 2026-03-09 18:03:29,195:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,196:      pdf_renderer.py:  470: printSegment: s historical turnover rate. If we
+   DEBUG: 2026-03-09 18:03:29,197:      pdf_renderer.py:  470: printSegment: overestimate p
+   DEBUG: 2026-03-09 18:03:29,198:      pdf_renderer.py:  470: printSegment: _
+   DEBUG: 2026-03-09 18:03:29,203:      pdf_renderer.py:  470: printSegment: exp, the system becomes slightly more conservative (orders less). If we
+   DEBUG: 2026-03-09 18:03:29,205:      pdf_renderer.py:  470: printSegment: underestimate it, we order a bit more. But here
+   DEBUG: 2026-03-09 18:03:29,206:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,207:      pdf_renderer.py:  470: printSegment: s the key: because the 
+   DEBUG: 2026-03-09 18:03:29,208:      pdf_renderer.py:  470: printSegment: stockout penalty dominates
+   DEBUG: 2026-03-09 18:03:29,210:      pdf_renderer.py:  470: printSegment: 
+   DEBUG: 2026-03-09 18:03:29,210:      pdf_renderer.py:  470: printSegment: (alpha = 10), even large errors in p
+   DEBUG: 2026-03-09 18:03:29,211:      pdf_renderer.py:  470: printSegment: _
+   DEBUG: 2026-03-09 18:03:29,217:      pdf_renderer.py:  470: printSegment: exp have minimal impact on the final order quantity. The system
+   DEBUG: 2026-03-09 18:03:29,220:      pdf_renderer.py:  470: printSegment: is robust to wastage parameter uncertainty — it
+   DEBUG: 2026-03-09 18:03:29,221:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,223:      pdf_renderer.py:  470: printSegment: s designed that way deliberately.
+   DEBUG: 2026-03-09 18:03:29,225:      pdf_renderer.py:  470: printSegment: Q7: 
+   DEBUG: 2026-03-09 18:03:29,226:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,226:      pdf_renderer.py:  470: printSegment: How would you implement this in a real pharmacy setting?
+   DEBUG: 2026-03-09 18:03:29,227:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,229:      pdf_renderer.py:  470: printSegment: The Streamlit dashboard is our proof-of-concept interface. For a real deployment, you
+   DEBUG: 2026-03-09 18:03:29,230:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,231:      pdf_renderer.py:  470: printSegment: d connect it to
+   DEBUG: 2026-03-09 18:03:29,232:      pdf_renderer.py:  470: printSegment: the pharmacy
+   DEBUG: 2026-03-09 18:03:29,233:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,234:      pdf_renderer.py:  470: printSegment: s 
+   DEBUG: 2026-03-09 18:03:29,236:      pdf_renderer.py:  470: printSegment: point-of-sale system
+   DEBUG: 2026-03-09 18:03:29,238:      pdf_renderer.py:  470: printSegment:  for real-time sales data, and to their 
+   DEBUG: 2026-03-09 18:03:29,239:      pdf_renderer.py:  470: printSegment: wholesaler
+   DEBUG: 2026-03-09 18:03:29,240:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,241:      pdf_renderer.py:  470: printSegment: s EDI feed
+   DEBUG: 2026-03-09 18:03:29,284:      pdf_renderer.py:  470: printSegment:  for
+   DEBUG: 2026-03-09 18:03:29,324:      pdf_renderer.py:  470: printSegment: automated ordering. The model retrains nightly on the latest 2 years of data. A pharmacist would
+   DEBUG: 2026-03-09 18:03:29,345:      pdf_renderer.py:  470: printSegment: open the dashboard each morning, see which drugs need reordering, and approve the suggested
+   DEBUG: 2026-03-09 18:03:29,352:      pdf_renderer.py:  470: printSegment: quantities. Over time, as the system builds trust, you could automate low-risk orders entirely and
+   DEBUG: 2026-03-09 18:03:29,353:      pdf_renderer.py:  470: printSegment: only flag high-cost or unusual recommendations for human review.
+   DEBUG: 2026-03-09 18:03:29,356:      pdf_renderer.py:  470: printSegment: Q8: 
+   DEBUG: 2026-03-09 18:03:29,356:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,357:      pdf_renderer.py:  470: printSegment: What
+   DEBUG: 2026-03-09 18:03:29,357:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,359:      pdf_renderer.py:  470: printSegment: s the business case? How much money does this actually save?
+   DEBUG: 2026-03-09 18:03:29,359:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,363:      pdf_renderer.py:  470: printSegment: An independent pharmacy doing $3-5 million in annual revenue typically loses 2-5% to inventory
+   DEBUG: 2026-03-09 18:03:29,365:      pdf_renderer.py:  470: printSegment: shrinkage — that
+   DEBUG: 2026-03-09 18:03:29,365:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,407:      pdf_renderer.py:  470: printSegment: s $60,000 to $250,000 per year in expired drugs and emergency reorders. Even a 30%
+   DEBUG: 2026-03-09 18:03:29,432:      pdf_renderer.py:  470: printSegment: reduction in waste through better forecasting saves $20,000-$75,000 annually. On the stockout side,
+   DEBUG: 2026-03-09 18:03:29,444:      pdf_renderer.py:  470: printSegment: each lost patient represents $2,000-$5,000 in annual prescription revenue. Preventing even 10
+   DEBUG: 2026-03-09 18:03:29,446:      pdf_renderer.py:  470: printSegment: patient defections per year saves $20,000-$50,000. The system effectively pays for itself within
+   DEBUG: 2026-03-09 18:03:29,447:      pdf_renderer.py:  470: printSegment: months.
+   DEBUG: 2026-03-09 18:03:29,448:      pdf_renderer.py:  470: printSegment: Q9: 
+   DEBUG: 2026-03-09 18:03:29,449:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,449:      pdf_renderer.py:  470: printSegment: Why 8 drugs? Why these specific ones?
+   DEBUG: 2026-03-09 18:03:29,450:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,451:      pdf_renderer.py:  470: printSegment: We selected 8 drugs that represent the 
+   DEBUG: 2026-03-09 18:03:29,452:      pdf_renderer.py:  470: printSegment: key demand archetypes
+   DEBUG: 2026-03-09 18:03:29,455:      pdf_renderer.py:  470: printSegment:  in a community pharmacy.
+   DEBUG: 2026-03-09 18:03:29,455:      pdf_renderer.py:  470: printSegment: Metformin and Lisinopril are 
+   DEBUG: 2026-03-09 18:03:29,456:      pdf_renderer.py:  470: printSegment: stable chronic medications
+   DEBUG: 2026-03-09 18:03:29,458:      pdf_renderer.py:  470: printSegment:  — high volume, predictable. Amoxicillin and
+   DEBUG: 2026-03-09 18:03:29,459:      pdf_renderer.py:  470: printSegment: Azithromycin are 
+   DEBUG: 2026-03-09 18:03:29,460:      pdf_renderer.py:  470: printSegment: seasonal antibiotics
+   DEBUG: 2026-03-09 18:03:29,461:      pdf_renderer.py:  470: printSegment:  — they spike in winter. Cetirizine is a 
+   DEBUG: 2026-03-09 18:03:29,462:      pdf_renderer.py:  470: printSegment: seasonal allergy drug
+   DEBUG: 2026-03-09 18:03:29,463:      pdf_renderer.py:  470: printSegment:  —
+   DEBUG: 2026-03-09 18:03:29,464:      pdf_renderer.py:  470: printSegment: spring spike. Albuterol is 
+   DEBUG: 2026-03-09 18:03:29,465:      pdf_renderer.py:  470: printSegment: weather-sensitive
+   DEBUG: 2026-03-09 18:03:29,465:      pdf_renderer.py:  470: printSegment: . Sertraline has a 
+   DEBUG: 2026-03-09 18:03:29,467:      pdf_renderer.py:  470: printSegment: winter SAD pattern
+   DEBUG: 2026-03-09 18:03:29,468:      pdf_renderer.py:  470: printSegment: . And
+   DEBUG: 2026-03-09 18:03:29,469:      pdf_renderer.py:  470: printSegment: Omeprazole is a 
+   DEBUG: 2026-03-09 18:03:29,471:      pdf_renderer.py:  470: printSegment: high-volume OTC-adjacent
+   DEBUG: 2026-03-09 18:03:29,480:      pdf_renderer.py:  470: printSegment:  drug. Together, these 8 cover every major demand
+   DEBUG: 2026-03-09 18:03:29,481:      pdf_renderer.py:  470: printSegment: pattern a pharmacy sees. If the model works across all 8 archetypes, it generalizes.
+   DEBUG: 2026-03-09 18:03:29,483:      pdf_renderer.py:  470: printSegment: Q10: 
+   DEBUG: 2026-03-09 18:03:29,483:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,486:      pdf_renderer.py:  470: printSegment: How do you handle the lead time variability in your reorder logic?
+   DEBUG: 2026-03-09 18:03:29,487:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,513:      pdf_renderer.py:  470: printSegment: Currently we use a fixed lead time per drug from our configuration — typically 2-3 days for common
+   DEBUG: 2026-03-09 18:03:29,523:      pdf_renderer.py:  470: printSegment: generics. The safety stock calculation accounts for this: Reorder Point = (Lead Time × Average
+   DEBUG: 2026-03-09 18:03:29,524:      pdf_renderer.py:  470: printSegment: Demand) + (Safety Stock Days × Average Demand). In a production system, you
+   DEBUG: 2026-03-09 18:03:29,526:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,533:      pdf_renderer.py:  470: printSegment: d estimate lead
+   DEBUG: 2026-03-09 18:03:29,536:      pdf_renderer.py:  470: printSegment: time distributions from historical order-to-delivery data and incorporate that uncertainty into the cost
+   DEBUG: 2026-03-09 18:03:29,537:      pdf_renderer.py:  470: printSegment: function optimization. That
+   DEBUG: 2026-03-09 18:03:29,538:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,539:      pdf_renderer.py:  470: printSegment: s a natural next step — moving from deterministic lead times to stochastic
+   DEBUG: 2026-03-09 18:03:29,540:      pdf_renderer.py:  470: printSegment: ones.
+   DEBUG: 2026-03-09 18:03:29,542:      pdf_renderer.py:  470: printSegment: GENERAL TIPS FOR Q
+   DEBUG: 2026-03-09 18:03:29,543:      pdf_renderer.py:  470: printSegment: &
+   DEBUG: 2026-03-09 18:03:29,543:      pdf_renderer.py:  470: printSegment: A:
+   DEBUG: 2026-03-09 18:03:29,545:      pdf_renderer.py:  470: printSegment:  1 
+   DEBUG: 2026-03-09 18:03:29,545:      pdf_renderer.py:  470: printSegment: If you don
+   DEBUG: 2026-03-09 18:03:29,546:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,547:      pdf_renderer.py:  470: printSegment: t know the answer
+   DEBUG: 2026-03-09 18:03:29,548:      pdf_renderer.py:  470: printSegment: : 
+   DEBUG: 2026-03-09 18:03:29,548:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,549:      pdf_renderer.py:  470: printSegment: That
+   DEBUG: 2026-03-09 18:03:29,550:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,551:      pdf_renderer.py:  470: printSegment: s a great question — it
+   DEBUG: 2026-03-09 18:03:29,551:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,553:      pdf_renderer.py:  470: printSegment: s outside the scope of what we
+   DEBUG: 2026-03-09 18:03:29,555:      pdf_renderer.py:  470: printSegment: implemented, but here
+   DEBUG: 2026-03-09 18:03:29,556:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,556:      pdf_renderer.py:  470: printSegment: s how I
+   DEBUG: 2026-03-09 18:03:29,557:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,558:      pdf_renderer.py:  470: printSegment: d approach it...
+   DEBUG: 2026-03-09 18:03:29,559:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,559:      pdf_renderer.py:  470: printSegment:  2 
+   DEBUG: 2026-03-09 18:03:29,561:      pdf_renderer.py:  470: printSegment: If it
+   DEBUG: 2026-03-09 18:03:29,563:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,564:      pdf_renderer.py:  470: printSegment: s a criticism
+   DEBUG: 2026-03-09 18:03:29,565:      pdf_renderer.py:  470: printSegment: : Acknowledge it. 
+   DEBUG: 2026-03-09 18:03:29,567:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,568:      pdf_renderer.py:  470: printSegment: You
+   DEBUG: 2026-03-09 18:03:29,569:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,570:      pdf_renderer.py:  470: printSegment: re absolutely right that
+   DEBUG: 2026-03-09 18:03:29,571:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,572:      pdf_renderer.py:  470: printSegment: s a limitation. We addressed it by...
+   DEBUG: 2026-03-09 18:03:29,573:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,574:      pdf_renderer.py:  470: printSegment: 
+   DEBUG: 2026-03-09 18:03:29,575:      pdf_renderer.py:  470: printSegment: or 
+   DEBUG: 2026-03-09 18:03:29,576:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,577:      pdf_renderer.py:  470: printSegment: That
+   DEBUG: 2026-03-09 18:03:29,578:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,579:      pdf_renderer.py:  470: printSegment: s something we
+   DEBUG: 2026-03-09 18:03:29,580:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,581:      pdf_renderer.py:  470: printSegment: d tackle in the next iteration.
+   DEBUG: 2026-03-09 18:03:29,582:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,583:      pdf_renderer.py:  470: printSegment:  3 
+   DEBUG: 2026-03-09 18:03:29,584:      pdf_renderer.py:  470: printSegment: Bridge back to your key message
+   DEBUG: 2026-03-09 18:03:29,586:      pdf_renderer.py:  470: printSegment: : Always end answers by connecting back to: 
+   DEBUG: 2026-03-09 18:03:29,588:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,589:      pdf_renderer.py:  470: printSegment: ...and that
+   DEBUG: 2026-03-09 18:03:29,590:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-03-09 18:03:29,595:      pdf_renderer.py:  470: printSegment: s why
+   DEBUG: 2026-03-09 18:03:29,596:      pdf_renderer.py:  470: printSegment: the asymmetric cost approach is important — it keeps patient safety as the top priority.
+   DEBUG: 2026-03-09 18:03:29,597:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,598:      pdf_renderer.py:  470: printSegment:  4 
+   DEBUG: 2026-03-09 18:03:29,599:      pdf_renderer.py:  470: printSegment: Numbers impress
+   DEBUG: 2026-03-09 18:03:29,600:      pdf_renderer.py:  470: printSegment: : Drop specific numbers whenever you can. 
+   DEBUG: 2026-03-09 18:03:29,601:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,602:      pdf_renderer.py:  470: printSegment: $400 vs 55 cents.
+   DEBUG: 2026-03-09 18:03:29,603:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,605:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-03-09 18:03:29,606:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,607:      pdf_renderer.py:  470: printSegment: 727x difference.
+   DEBUG: 2026-03-09 18:03:29,608:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,609:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-03-09 18:03:29,610:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,611:      pdf_renderer.py:  470: printSegment: Alpha of 10.
+   DEBUG: 2026-03-09 18:03:29,612:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,613:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-03-09 18:03:29,614:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,615:      pdf_renderer.py:  470: printSegment: 80th to 90th percentile.
+   DEBUG: 2026-03-09 18:03:29,616:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-03-09 18:03:29,617:      pdf_renderer.py:   53: 0, [1, 'PRESENTATION SPEAKER SCRIPT', 1, 68.0]
+   DEBUG: 2026-03-09 18:03:29,617:      pdf_renderer.py:   53: 1, [2, 'Intelligent Pharmacy Inventory Management', 1, 106.0]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 2, [3, '~5 Minutes | Print This Out ', 1, 139.20000000000002]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 3, [2, 'SLIDE 1 — Title (15 seconds)', 1, 180.40000000000003]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 4, [2, 'SLIDE 2 — The Problem (45 seconds)', 1, 286.00000000000006]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 5, [2, 'SLIDE 3 — Literature Review (45 seconds)', 1, 463.6000000000001]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 6, [2, 'SLIDE 4 — Why MAPE Is Not Enough (40 seconds)', 1, 665.2]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 7, [2, 'SLIDE 5 — Cost Functions (50 seconds)', 2, 212.8]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 8, [2, 'SLIDE 6 — Technical Architecture (40 seconds)', 2, 438.40000000000003]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 9, [2, 'SLIDE 7 — Who Else Is Doing This (30 seconds)', 2, 616.0]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 10, [2, 'SLIDE 8 — Evaluation ', 3, 116.80000000000001]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 11, [2, 'SLIDE 9 — Thank You (15 seconds)', 3, 234.40000000000003]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 12, [1, 'CHEAT SHEET: LIKELY QUESTIONS ', 3, 370.40000000000003]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 13, [2, 'Print This On The Back / Second Page', 3, 408.40000000000003]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 14, [3, 'Q1: ', 3, 453.6]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 15, [3, 'Q2: ', 3, 566.4]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 16, [3, 'Q3: ', 4, 72.0]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 17, [3, 'Q4: ', 4, 211.20000000000002]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 18, [3, 'Q5: ', 4, 336.0]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 19, [3, 'Q6: ', 4, 472.79999999999995]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 20, [3, 'Q7: ', 4, 597.5999999999999]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 21, [3, 'Q8: ', 5, 72.0]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 22, [3, 'Q9: ', 5, 196.8]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 23, [3, 'Q10: ', 5, 321.6]
+   DEBUG: 2026-03-09 18:03:29,618:      pdf_renderer.py:   53: 24, [3, 'GENERAL TIPS FOR Q', 5, 446.4]
