@@ -70,14 +70,23 @@ def build_prophet_model(drug_name: str, holidays_df: pd.DataFrame, drug_config: 
 
 
 def train_prophet(drug_name, train_df, holidays_df, forecast_periods, drug_config=None):
-    """Train using Prophet and return forecast DataFrame."""
+    """Train using Prophet and return forecast DataFrame + posterior samples."""
     model = build_prophet_model(drug_name, holidays_df, drug_config=drug_config)
     model.fit(train_df)
 
     future = model.make_future_dataframe(periods=forecast_periods, freq="D")
     forecast = model.predict(future)
 
-    return model, forecast
+    # Generate posterior predictive samples for non-parametric Newsvendor optimization
+    # Shape: (nforecast, uncertainty_samples) where default uncertainty_samples=1000
+    try:
+        posterior = model.predictive_samples(future)
+        posterior_samples = posterior["yhat"]  # ndarray (nforecast, 1000)
+    except Exception as e:
+        print(f"  [WARN] Could not generate posterior samples for {drug_name}: {e}")
+        posterior_samples = None
+
+    return model, forecast, posterior_samples
 
 
 # =============================================================================
@@ -240,13 +249,15 @@ def train_single_drug(
 
     forecast_periods = len(test_df) + FORECAST_HORIZON_DAYS
 
+    posterior_samples = None
+
     if PROPHET_AVAILABLE:
         catalog = drug_catalog or DRUG_CATALOG
         drug_config = catalog[drug_name]
         print(f"  Using: Facebook Prophet (tuned)")
         print(f"    changepoint_prior: {drug_config.get('changepoint_prior_scale', 0.05)}")
         print(f"    seasonality_prior: {drug_config.get('seasonality_prior_scale', 10.0)}")
-        model, forecast = train_prophet(drug_name, train_df, holidays_df, forecast_periods, drug_config=drug_config)
+        model, forecast, posterior_samples = train_prophet(drug_name, train_df, holidays_df, forecast_periods, drug_config=drug_config)
     else:
         print("  Using: Holt-Winters Exponential Smoothing")
         model, forecast = train_holtwinters(drug_name, train_df, forecast_periods)
@@ -264,6 +275,7 @@ def train_single_drug(
         "train_df": train_df,
         "test_df": test_df,
         "forecast": forecast,
+        "posterior_samples": posterior_samples,
     }
 
 

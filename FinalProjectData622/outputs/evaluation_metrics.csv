@@ -1,9 +1,9 @@
 drug_name,mape,smape,wmape,mae,rmse,coverage_80pct,test_days,target_met
 Amoxicillin_500mg,26.45,23.06,20.0,5.56,6.69,65.0,60,False
-Metformin_500mg,25.67,21.45,17.63,5.28,6.13,63.3,60,True
-Lisinopril_10mg,25.89,22.02,19.71,5.23,6.45,65.0,60,True
-Albuterol_Inhaler,50.81,33.19,27.92,3.6,4.26,56.7,60,False
-Cetirizine_10mg,43.16,43.22,34.95,3.4,4.05,75.0,60,False
+Metformin_500mg,25.67,21.45,17.63,5.28,6.13,60.0,60,True
+Lisinopril_10mg,25.89,22.02,19.71,5.23,6.45,63.3,60,True
+Albuterol_Inhaler,50.81,33.19,27.92,3.6,4.26,55.0,60,False
+Cetirizine_10mg,43.16,43.22,34.95,3.4,4.05,70.0,60,False
 Azithromycin_250mg,34.49,30.71,27.26,4.22,5.35,56.7,60,False
-Omeprazole_20mg,19.59,19.32,18.84,4.48,6.22,76.7,60,True
-Sertraline_50mg,28.55,25.15,22.92,4.44,5.79,65.0,60,False
+Omeprazole_20mg,19.59,19.32,18.84,4.48,6.22,73.3,60,True
+Sertraline_50mg,28.55,25.15,22.92,4.44,5.79,68.3,60,False

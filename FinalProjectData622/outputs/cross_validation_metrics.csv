@@ -1,9 +1,9 @@
 drug_name,cv_mape,cv_mae,cv_rmse,cv_coverage,n_cutoffs
-Amoxicillin_500mg,36.47,4.76,6.09,71.1,12
-Metformin_500mg,22.46,4.81,6.19,72.2,12
-Lisinopril_10mg,26.81,4.54,5.59,71.4,12
-Albuterol_Inhaler,77.63,2.83,3.59,72.5,12
-Cetirizine_10mg,41.98,3.49,4.48,73.3,12
-Azithromycin_250mg,68.46,2.98,3.85,78.1,12
+Amoxicillin_500mg,36.47,4.76,6.09,70.6,12
+Metformin_500mg,22.46,4.81,6.19,71.7,12
+Lisinopril_10mg,26.81,4.54,5.59,70.8,12
+Albuterol_Inhaler,77.63,2.83,3.59,72.2,12
+Cetirizine_10mg,41.98,3.49,4.48,73.6,12
+Azithromycin_250mg,68.46,2.98,3.85,76.7,12
 Omeprazole_20mg,58.64,4.28,5.54,70.8,12
-Sertraline_50mg,35.42,3.45,4.42,75.3,12
+Sertraline_50mg,35.42,3.45,4.42,75.6,12

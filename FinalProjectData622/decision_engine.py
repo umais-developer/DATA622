@@ -256,7 +256,66 @@ def calculate_reorder_point(drug_config: dict, avg_daily_demand: float) -> float
     return rop
 
 
-def calculate_cost_optimal_quantity(
+def calculate_cost_optimal_quantity_empirical(
+    posterior_samples: np.ndarray,
+    unit_cost: float,
+    shelf_life_days: int,
+) -> tuple:
+    """
+    Find cost-optimal order quantity Q* using posterior predictive samples.
+
+    Instead of assuming demand follows a Gaussian distribution, this method
+    uses Prophet's posterior predictive draws directly. The optimal quantity
+    is found by computing the empirical quantile at the critical ratio,
+    which is distribution-free and accounts for skewness, heavy tails,
+    and other non-Gaussian features of the demand distribution.
+
+    Parameters
+    ----------
+    posterior_samples : np.ndarray
+        Array of shape (n_days, n_samples) containing posterior predictive
+        draws for each forecast day. Summed across days to get total
+        30-day demand distribution.
+    unit_cost : float
+        Cost per unit of the drug.
+    shelf_life_days : int
+        Shelf life in days (used to estimate expiration probability).
+
+    Returns
+    -------
+    tuple of (optimal_quantity, asymmetric_loss, critical_ratio)
+    """
+    # Per-unit cost rates from proposal formulas
+    p_exp = _get_expiration_probability(shelf_life_days)
+    c_hold = COST_PARAMS["daily_holding_cost_per_unit"]
+    c_w = unit_cost * p_exp + c_hold  # Wastage cost per excess unit
+
+    alpha = COST_PARAMS["asymmetric_alpha"]
+    c_emergency = COST_PARAMS["emergency_reorder_cost"]
+    c_churn = COST_PARAMS["patient_churn_cost"]
+    c_s = alpha * unit_cost + c_emergency + c_churn  # Stockout cost per deficit unit
+
+    # Critical ratio (newsvendor): optimal quantile
+    critical_ratio = c_s / (c_s + c_w)
+
+    # Sum samples across the forecast horizon to get total demand distribution
+    # Each column is one posterior draw; summing rows gives 30-day total per draw
+    total_demand_samples = np.clip(posterior_samples, 0, None).sum(axis=0)
+
+    # Q* = empirical quantile of total demand at the critical ratio
+    # This is the non-parametric analog of norm.ppf(CR, mu, sigma)
+    q_star = float(np.quantile(total_demand_samples, critical_ratio))
+    q_star = max(0, q_star)
+
+    # Expected asymmetric loss computed empirically over all samples
+    excess = np.maximum(q_star - total_demand_samples, 0)
+    deficit = np.maximum(total_demand_samples - q_star, 0)
+    asymmetric_loss = float(np.mean(c_w * excess + c_s * deficit))
+
+    return round(q_star, 0), round(asymmetric_loss, 2), round(critical_ratio, 4)
+
+
+def calculate_cost_optimal_quantity_gaussian(
     forecast_mean: float,
     forecast_lower: float,
     forecast_upper: float,
@@ -264,17 +323,18 @@ def calculate_cost_optimal_quantity(
     shelf_life_days: int,
 ) -> tuple:
     """
-    Find cost-optimal order quantity Q* per proposal Section 7.2.
+    Find cost-optimal order quantity Q* using Gaussian approximation (fallback).
 
-    Searches candidate quantities between y_lower and y_upper to minimize
-    the total asymmetric loss L = C_w + C_s.
+    This method fits a normal distribution to Prophet's 80% prediction intervals
+    and uses the inverse Gaussian CDF. Used as a fallback when posterior samples
+    are not available (e.g., Holt-Winters backend).
 
     Uses the newsvendor critical ratio: Q* = F^{-1}(c_s / (c_s + c_w))
     where c_s is per-unit stockout cost and c_w is per-unit wastage cost.
 
     Returns
     -------
-    tuple of (optimal_quantity, asymmetric_loss_at_optimal)
+    tuple of (optimal_quantity, asymmetric_loss, critical_ratio)
     """
     from scipy.stats import norm
 
@@ -317,20 +377,32 @@ def calculate_order_quantity(
     drug_config: dict,
     forecast_lower: float = None,
     forecast_upper: float = None,
+    posterior_samples: np.ndarray = None,
 ) -> tuple:
     """
     Calculate order quantity using cost-optimal Q* from proposal Section 7.2.
 
-    Searches between y_lower and y_upper to minimize total asymmetric loss,
-    then subtracts current stock to get the net order quantity.
+    Prefers the empirical (posterior sample) method when samples are available,
+    which avoids the Gaussian assumption. Falls back to the Gaussian approximation
+    when posterior samples are not provided.
 
     Returns
     -------
     tuple of (order_qty, asymmetric_loss, critical_ratio)
     """
-    # Use cost-optimal Q* if we have prediction intervals
-    if forecast_lower is not None and forecast_upper is not None:
-        q_star, asymmetric_loss, critical_ratio = calculate_cost_optimal_quantity(
+    # Prefer empirical method using posterior predictive samples
+    if posterior_samples is not None:
+        q_star, asymmetric_loss, critical_ratio = calculate_cost_optimal_quantity_empirical(
+            posterior_samples=posterior_samples,
+            unit_cost=drug_config["unit_cost"],
+            shelf_life_days=drug_config["shelf_life_days"],
+        )
+        # Net order = Q* minus what we already have
+        target_stock = q_star + (drug_config["safety_stock_days"] * (forecast_demand / FORECAST_HORIZON_DAYS))
+        order_qty = max(0, target_stock - current_stock)
+    elif forecast_lower is not None and forecast_upper is not None:
+        # Fallback: Gaussian approximation from prediction intervals
+        q_star, asymmetric_loss, critical_ratio = calculate_cost_optimal_quantity_gaussian(
             forecast_mean=forecast_demand,
             forecast_lower=forecast_lower,
             forecast_upper=forecast_upper,
@@ -341,7 +413,7 @@ def calculate_order_quantity(
         target_stock = q_star + (drug_config["safety_stock_days"] * (forecast_demand / FORECAST_HORIZON_DAYS))
         order_qty = max(0, target_stock - current_stock)
     else:
-        # Fallback: use upper bound (old behavior)
+        # Final fallback: simple heuristic
         target_stock = forecast_demand + (drug_config["safety_stock_days"] * (forecast_demand / FORECAST_HORIZON_DAYS))
         order_qty = max(0, target_stock - current_stock)
         asymmetric_loss = 0.0
@@ -385,9 +457,26 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
         forecast_peak_demand = forecast_demand_array.max()
         avg_daily_demand = forecast_demand_array.mean()
 
-        # Prediction interval totals for Q* optimization (proposal Section 7.2)
+        # Prediction interval totals for Q* optimization (Gaussian fallback)
         forecast_lower_total = future_forecast["yhat_lower"].clip(lower=0).sum()
         forecast_upper_total = future_forecast["yhat_upper"].clip(lower=0).sum()
+
+        # Extract posterior samples for the future period (empirical Newsvendor)
+        future_posterior_samples = None
+        all_posterior_samples = result.get("posterior_samples")
+        if all_posterior_samples is not None:
+            # posterior_samples shape: (total_forecast_rows, n_samples)
+            # We need only the last FORECAST_HORIZON_DAYS rows (the future period)
+            n_total = len(forecast)
+            n_future = len(future_forecast)
+            # The future period corresponds to the last forecast_periods rows
+            # but we use the index of future_forecast within the full forecast
+            future_idx = forecast.index.get_indexer(future_forecast.index)
+            if len(future_idx) == n_future and all_posterior_samples.shape[0] >= n_total:
+                future_posterior_samples = all_posterior_samples[future_idx, :]
+            else:
+                # Fallback: take the last FORECAST_HORIZON_DAYS rows
+                future_posterior_samples = all_posterior_samples[-FORECAST_HORIZON_DAYS:, :]
 
         # Calculate reorder point
         rop = calculate_reorder_point(drug_config, avg_daily_demand)
@@ -401,11 +490,13 @@ def generate_reorder_recommendations(results: dict, drug_catalog: dict = None) -
             simulated_current_stock = int(historical_avg * 14)
 
         # Cost-optimal order quantity Q* (proposal Section 7.2)
+        # Prefers posterior samples (empirical quantile) over Gaussian approximation
         days_of_stock_remaining = simulated_current_stock / max(avg_daily_demand, 1)
         order_qty, asymmetric_loss, critical_ratio = calculate_order_quantity(
             forecast_total_demand, simulated_current_stock, rop, drug_config,
             forecast_lower=forecast_lower_total,
             forecast_upper=forecast_upper_total,
+            posterior_samples=future_posterior_samples,
         )
         order_cost = order_qty * drug_config["unit_cost"]
 

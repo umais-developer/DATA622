@@ -1,9 +1,9 @@
-drug_name,category,action,urgency,order_quantity,order_cost,current_stock_est,days_stock_remaining,forecast_30d_demand,forecast_peak_daily,reorder_point,wastage_cost,understocking_cost,holding_cost,total_cost_of_ownership,service_level_pct,waste_rate_pct,expired_units_est,stockout_units_est
-Amoxicillin_500mg,Antibiotic,PLAN ORDER,MEDIUM,940,423.0,263,9.4,843,35.6,197,44.36,924.41,0.97,1392.74,31.2,0.0,0,580
-Metformin_500mg,Diabetes,PLAN ORDER,MEDIUM,1010,121.2,407,12.9,946,46.9,284,9.87,290.81,0.4,422.28,43.0,0.0,0,538
-Lisinopril_10mg,Blood Pressure,PLAN ORDER,MEDIUM,890,71.2,331,12.5,795,40.5,239,6.82,205.34,0.22,283.58,41.6,0.0,0,464
-Albuterol_Inhaler,Respiratory,PLAN ORDER,MEDIUM,490,12250.0,114,8.7,393,20.1,105,1300.21,22544.57,23.42,36118.2,29.0,0.0,0,279
-Cetirizine_10mg,Allergy,MONITOR,LOW,310,46.5,168,19.6,257,14.6,60,5.45,95.72,0.21,147.88,65.4,0.0,0,88
-Azithromycin_250mg,Antibiotic,PLAN ORDER,MEDIUM,550,660.0,143,9.4,458,22.5,107,72.45,1291.84,1.41,2025.7,31.2,0.0,0,314
-Omeprazole_20mg,Gastrointestinal,PLAN ORDER,MEDIUM,830,83.0,271,11.5,704,37.4,211,7.33,229.37,0.22,319.92,38.5,0.0,0,433
-Sertraline_50mg,Mental Health,ORDER SOON,HIGH,770,138.6,204,10.6,575,31.6,230,11.32,307.29,0.3,457.51,35.5,0.0,0,370
+drug_name,category,action,urgency,order_quantity,order_cost,current_stock_est,days_stock_remaining,forecast_30d_demand,forecast_peak_daily,reorder_point,wastage_cost,understocking_cost,holding_cost,total_cost_of_ownership,asymmetric_loss,critical_ratio,service_level_pct,waste_rate_pct,expired_units_est,stockout_units_est
+Amoxicillin_500mg,Antibiotic,PLAN ORDER,MEDIUM,800,360.0,263,9.4,843,35.6,197,11.54,6382.09,0.97,6754.6,4.08,0.9952,31.2,0.0,0,580
+Metformin_500mg,Diabetes,PLAN ORDER,MEDIUM,840,100.8,407,12.9,946,46.9,284,9.76,4149.4,0.4,4260.36,2.67,0.9958,43.0,0.0,0,538
+Lisinopril_10mg,Blood Pressure,PLAN ORDER,MEDIUM,720,57.6,331,12.5,795,40.5,239,8.08,3388.85,0.22,3454.75,2.4,0.9957,41.6,0.0,0,464
+Albuterol_Inhaler,Respiratory,PLAN ORDER,MEDIUM,390,9750.0,114,8.7,393,20.1,105,141.44,71691.44,23.42,81606.3,62.67,0.995,29.0,0.0,0,279
+Cetirizine_10mg,Allergy,MONITOR,LOW,190,28.5,168,19.6,257,14.6,60,3.34,710.74,0.21,742.79,1.83,0.9959,65.4,0.0,0,88
+Azithromycin_250mg,Antibiotic,PLAN ORDER,MEDIUM,440,528.0,143,9.4,458,22.5,107,11.26,5826.1,1.41,6366.77,4.95,0.9952,31.2,0.0,0,314
+Omeprazole_20mg,Gastrointestinal,PLAN ORDER,MEDIUM,670,67.0,271,11.5,704,37.4,211,7.57,3250.76,0.22,3325.55,2.48,0.9958,38.5,0.0,0,433
+Sertraline_50mg,Mental Health,ORDER SOON,HIGH,620,111.6,204,10.6,575,31.6,230,8.38,3077.0,0.3,3197.28,2.13,0.996,35.5,0.0,0,370
